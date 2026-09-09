@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المحقق: لغز البرج القرمزي</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background-color: #0b0e14;
+            color: #d1d7e0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #game-card {
+            background: #161b22;
+            width: 100%;
+            max-width: 520px;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            position: relative;
+        }
+        .sound-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        h1 { color: #f0883e; text-align: center; margin: 0 0 5px 0; font-size: 1.4rem; }
+        .sub { text-align: center; font-size: 0.85rem; color: #8b949e; margin-bottom: 12px; }
+        .timer-box { text-align: center; font-size: 1.1rem; color: #ff7b72; font-weight: bold; margin-bottom: 12px; }
+        .scene-box {
+            background: #21262d;
+            padding: 15px;
+            border-radius: 8px;
+            border-right: 4px solid #f0883e;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            min-height: 85px;
+            white-space: pre-line;
+            font-size: 0.95rem;
+        }
+        .btn-stack { display: flex; flex-direction: column; gap: 8px; }
+        button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        button:hover { background: #2ea043; }
+        button.tool-btn { background: #1f6feb; }
+        button.tool-btn:hover { background: #388bfd; }
+        button.danger { background: #da3633; }
+        button.danger:hover { background: #f85149; }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .inventory-panel {
+            margin-top: 15px;
+            background: #0d1117;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px dashed #30363d;
+            font-size: 0.85rem;
+        }
+        .leaderboard {
+            margin-top: 15px;
+            background: #0d1117;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+        }
+        .leaderboard h3 { margin: 0 0 10px 0; color: #58a6ff; font-size: 0.95rem; text-align: center; }
+        .ranking-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #21262d;
+            font-size: 0.85rem;
+        }
+        .developer-footer {
+            text-align: center;
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid #30363d;
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+        .contact-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .contact-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: #ffffff;
+            transition: opacity 0.2s;
+        }
+        .contact-btn:hover { opacity: 0.85; }
+        .wa-btn { background-color: #238636; }
+        .fb-btn { background-color: #1877f2; }
+    </style>
+</head>
+<body>
+
+<div id="game-card">
+    <button class="sound-btn" onclick="toggleMute()" id="mute-btn">🔊 الصوت: مفعل</button>
+    <h1>المحقق: لغز البرج القرمزي</h1>
+    <div class="sub">قضية الغرفة المغلقة ومكالمة كشف الحقيقة</div>
+    <div class="timer-box" id="timer">الوقت المتبقي: 02:30</div>
+
+    <div class="scene-box" id="scene-text">
+        سجل اسمك لتبدأ التحقيق، واستعمل أدواتك وذكاءك قبل تفجير نظام البرج!
+    </div>
+
+    <div class="btn-stack" id="actions">
+        <input type="text" id="player-name" placeholder="اكتب اسم المحقق هنا" maxlength="15">
+        <button onclick="startGame()">دخول مسرح الجريمة</button>
+    </div>
+
+    <div class="inventory-panel" id="clues-box" style="display: none;">
+        <strong style="color: #58a6ff;">💼 حقيبة الأدلة المستجمعة:</strong>
+        <div id="clues-list">لا توجد أدلة بعد.</div>
+    </div>
+
+    <div class="leaderboard">
+        <h3>🏆 لائحة المحققين الأسرع</h3>
+        <div id="ranking-list">جارٍ تحميل الترتيب...</div>
+    </div>
+
+    <!-- بطاقة المطور والتواصل -->
+    <div class="developer-footer">
+        <div>تطوير وبرمجة: <strong>أشرف أبو حلالة</strong></div>
+        <div class="contact-links">
+            <a href="https://wa.me/218923853295" target="_blank" class="contact-btn wa-btn">
+                💬 واتساب
+            </a>
+            <a href="https://www.facebook.com/ashrafabuhalala" target="_blank" class="contact-btn fb-btn">
+                🌐 فيسبوك
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    const bgMusic = new Audio("https://cdn.freesound.org/previews/415/415804_5121236-lq.mp3");
+    const climaxMusic = new Audio("https://cdn.freesound.org/previews/172/172561_174499-lq.mp3");
+    const ringSound = new Audio("https://cdn.freesound.org/previews/218/218333_3905081-lq.mp3");
+
+    bgMusic.loop = true;
+    let isMuted = false;
+
+    function playBgMusic() {
+        if (!isMuted) bgMusic.play().catch(() => {});
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        bgMusic.muted = isMuted;
+        climaxMusic.muted = isMuted;
+        ringSound.muted = isMuted;
+        document.getElementById("mute-btn").innerText = isMuted ? "🔇 الصوت: مكتوم" : "🔊 الصوت: مفعل";
+    }
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyB32ymAp82BykjnGOgD0K7bVlW488N_iio",
+        authDomain: "detective-game-33111.firebaseapp.com",
+        databaseURL: "https://detective-game-33111-default-rtdb.firebaseio.com",
+        projectId: "detective-game-33111",
+        storageBucket: "detective-game-33111.appspot.com",
+        messagingSenderId: "1027770211932",
+        appId: "1:1027770211932:web:fc3c00c77609a67e411ba7",
+        measurementId: "G-LN495367G4"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function loadLeaderboard() {
+        db.ref("leaderboard").orderByChild("timeTaken").limitToFirst(5).on("value", snap => {
+            const list = document.getElementById("ranking-list");
+            list.innerHTML = "";
+            let rank = 1;
+            snap.forEach(c => {
+                const val = c.val();
+                list.innerHTML += `<div class="ranking-row"><span>#${rank} ${val.name}</span><span>${val.timeTaken} ثانية</span></div>`;
+                rank++;
+            });
+            if (rank === 1) list.innerText = "كن أول من يحل القضية!";
+        });
+    }
+    loadLeaderboard();
+
+    let playerName = "";
+    const clues = [];
+    let timeLeft = 150;
+    let timerInterval = null;
+
+    const timerEl = document.getElementById("timer");
+    const textEl = document.getElementById("scene-text");
+    const actionsEl = document.getElementById("actions");
+    const cluesList = document.getElementById("clues-list");
+
+    function addClue(c) {
+        if (!clues.includes(c)) {
+            clues.push(c);
+            cluesList.innerHTML = clues.map(i => `• ${i}`).join("<br>");
+        }
+    }
+
+    function startGame() {
+        const val = document.getElementById("player-name").value.trim();
+        if (!val) return alert("اكتب اسمك أولاً!");
+        playerName = val;
+        playBgMusic();
+        document.getElementById("clues-box").style.display = "block";
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft / 60);
+            let s = timeLeft % 60;
+            timerEl.innerText = `الوقت المتبقي: ${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                gameOver("انتهى الوقت! انفجرت القنبلة وخسرت المهمة.");
+            }
+        }, 1000);
+        mainHub();
+    }
+
+    function setScene(text, buttons) {
+        textEl.innerText = text;
+        actionsEl.innerHTML = "";
+        buttons.forEach(b => {
+            const btn = document.createElement("button");
+            btn.innerText = b.label;
+            if (b.className) btn.className = b.className;
+            btn.onclick = b.action;
+            actionsEl.appendChild(btn);
+        });
+    }
+
+    function mainHub() {
+        setScene(
+            `أنت في الممر الرئيسي أمام المكتب المقفل. المشتبه بهم متجمعون، وأدواتك جاهزة للعمل.`,
+            [
+                { label: "🔍 فحص مسرح الجريمة والآثار", action: inspectCrime },
+                { label: "👥 استجواب المشتبه بهم", action: talkPeople },
+                { label: "🎙️ إجراء مكالمة هاتفية وهمية (مغير الصوت)", action: fakeCallPhase, className: "tool-btn" },
+                { label: "⚡ توجيه الاتهام النهائي!", action: accusePhase, className: "danger" }
+            ]
+        );
+    }
+
+    function inspectCrime() {
+        setScene("ما المكان أو الأثر الذي تريد تفحصه بالعدسة؟", [
+            { label: "فحص جثة الضحية (المهندس سوزوكي)", action: () => {
+                addClue("الضحية توفي مخنوقاً وبيده ورقة ممزقة مكتوب عليها 'الخزنة'");
+                setScene("تفحصت الجثة: الضحية مات خنقاً، وبيده ورقة ممزقة كتب فيها 'الخزنة' بسرعة قبل مقتله.", [{ label: "فحص أثر آخر", action: inspectCrime }]);
+            }},
+            { label: "فحص باب الغرفة الزجاجي والقفل", action: () => {
+                addClue("خيط سنارة نايلون دقيق عالق بعقب الباب الخارجي");
+                setScene("المفتاح معلق بالقفل الداخلي بسلسلة، لكن نظاراتك كشفت خيط نايلون شفاف مقطوع عند حافة الباب السفلية!", [{ label: "فحص أثر آخر", action: inspectCrime }]);
+            }},
+            { label: "رجوع", action: mainHub }
+        ]);
+    }
+
+    function talkPeople() {
+        setScene("من تود استجوابه؟", [
+            { label: "السيد كين (الشريك المالي)", action: () => {
+                setScene("كين يفرك يديه بتوتر: 'أنا كنت بالطابق الأرضي أبحث عن هاتفي، لا أعرف شيئاً عن خزنة الضحية!'", [{ label: "مشتبه به آخر", action: talkPeople }]);
+            }},
+            { label: "المهندسة ريما (مسؤولة الشبكة)", action: () => {
+                setScene("ريما: 'انقطعت الكهرباء وحاولت فحص المولد، لكن رأيت شخصاً يخرج من الممر مسرعاً باتجاه الدرج.'", [{ label: "مشتبه به آخر", action: talkPeople }]);
+            }},
+            { label: "الحارس دايسوكي", action: () => {
+                setScene("دايسوكي: 'سمعت رنين هاتف المكتب الداخلي قبل انقطاع الكهرباء بثوانٍ.'", [{ label: "مشتبه به آخر", action: talkPeople }]);
+            }},
+            { label: "رجوع", action: mainHub }
+        ]);
+    }
+
+    function fakeCallPhase() {
+        if (!clues.includes("الضحية توفي مخنوقاً وبيده ورقة ممزقة مكتوب عليها 'الخزنة'")) {
+            setScene("تحتاج لفحص الجثة أولاً لتعرف ما السر الذي يربك المشتبه بهم قبل الاتصال!", [{ label: "رجوع", action: mainHub }]);
+            return;
+        }
+
+        if (!isMuted) ringSound.play().catch(() => {});
+
+        setScene(
+            "📞 (صوت رنين الهاتف يرن في القاعة...)\nعدلت ربطة العنق على صوت 'المهندس سوزوكي' وتحدثت عبر الهاتف الداخلي:\n'أنا حي! وسأفتح الخزنة الآن لأخرج مستندات الاختلاس أمام الجميع!'",
+            [
+                { label: "مراقبة رد فعل كين", action: () => {
+                    addClue("ارتباك كين ومحاولته إخفاء أصابعه المجروحة وسحب حقيبته");
+                    setScene("كين شحب وجهه فور سماع الصوت، وبدأ يحاول الهرب وسحب حقيبته وظهرت جروح حادة في أصابعه نتيجة شد الخيط!", [{ label: "متابعة", action: mainHub }]);
+                }},
+                { label: "مراقبة ريما ودايسوكي", action: () => {
+                    setScene("كلاهما صُدم من الصوت ولكن لم يتحركا من مكانهما.", [{ label: "متابعة", action: mainHub }]);
+                }}
+            ]
+        );
+    }
+
+    function accusePhase() {
+        bgMusic.pause();
+        if (!isMuted) climaxMusic.play().catch(() => {});
+
+        setScene("من القاتل الذي دبر خدعة الغرفة المغلقة؟", [
+            { label: "السيد كين", action: () => {
+                clearInterval(timerInterval);
+                const hasTrick = clues.includes("خيط سنارة نايلون دقيق عالق بعقب الباب الخارجي");
+                const hasTrap = clues.includes("ارتباك كين ومحاولته إخفاء أصابعه المجروحة وسحب حقيبته");
+
+                if (hasTrick && hasTrap) {
+                    const timeSpent = 150 - timeLeft;
+                    db.ref("leaderboard").push({ name: playerName, timeTaken: timeSpent, time: Date.now() });
+                    setScene(
+                        `استنتاج مذهل يا ${playerName}!\n'القاتل هو أنت يا كين! قتلت سوزوكي لخوفك من فضح اختلاس الخزنة، ثم أقفلت الباب من الخارج بسحب المفتاح بالخيط تحت عتبة الباب! جروح أصابعك ومكالمتي الوهمية كشفت خوفك القاطع!'\n\nانهار كين واعترف بجريمته وتم إبطال المؤقت بنجاح!\nالوقت المستغرق: ${timeSpent} ثانية.`,
+                        [{ label: "🔄 جولة جديدة", action: () => location.reload() }]
+                    );
+                } else {
+                    gameOver("اتهمت كين لكنك تفتقر للأدلة الحاسمة (حيلة الخيط أو فضح ارتباكه بالمكالمة)، فأنكر التهمة وأفلت بالجريمة!");
+                }
+            }},
+            { label: "المهندسة ريما", action: () => gameOver("اتهام خاطئ! ريما بريئة وأضعت الفرصة للقبض على الفاعل.") },
+            { label: "الحارس دايسوكي", action: () => gameOver("اتهام خاطئ! دايسوكي كان يؤدي واجبه فقط.") }
+        ]);
+    }
+
+    function gameOver(msg) {
+        clearInterval(timerInterval);
+        bgMusic.pause();
+        climaxMusic.pause();
+        setScene(msg, [{ label: "🔄 إعادة المحاولة", action: () => location.reload() }]);
+    }
+</script>
+
+</body>
+      </html>
+      
