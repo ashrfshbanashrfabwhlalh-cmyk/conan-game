@@ -254,8 +254,8 @@
                     <span>${val.score || 0} نقطة (المرحلة ${val.stage || 1})</span>
                 </div>`;
             });
-        }, err => {
-            list.innerText = "لوحة الترتيب جاهزة بانتظار أول محقق!";
+        }, () => {
+            list.innerText = "لا توجد سجلات بعد، ابدأ وكن الأول!";
         });
     }
     loadLeaderboard();
@@ -282,10 +282,13 @@
 
     function handleStartBtn() {
         const inputName = document.getElementById("player-name").value.trim();
-        if (!inputName) return alert("اكتب اسمك أولاً!");
+        if (!inputName) {
+            alert("⚠️ اكتب اسم المحقق في المربع أولاً للبدء!");
+            return;
+        }
 
         const btn = document.getElementById("start-btn");
-        btn.innerText = "جارٍ البدء...";
+        btn.innerText = "جارٍ الفحص...";
         btn.disabled = true;
 
         const playerKey = encodeURIComponent(inputName.toLowerCase());
@@ -311,7 +314,7 @@
                 if (snapshot.exists()) {
                     const data = snapshot.val();
                     if (savedLocalName && savedLocalName.toLowerCase() !== inputName.toLowerCase()) {
-                        alert(`⚠️ المحقق "${inputName}" مسجل مسبقاً! اختر اسماً آخر.`);
+                        alert(`⚠️ الاسم "${inputName}" مسجل مسبقاً! اكتب اسماً مختلفاً أو أضف رقماً.`);
                         return;
                     }
                     currentCaseNum = data.stage || 1;
@@ -333,37 +336,29 @@
     async function generateCase() {
         collectedClues = [];
         cluesList.innerHTML = "لا توجد أدلة بعد.";
-        textEl.innerText = "🧠 الذكاء الاصطناعي يؤلف الآن لغزاً جنائياً فريداً ومستقلاً تماماً... لحظات.";
+        textEl.innerText = "🧠 جارٍ تأليف تفاصيل القضية بالذكاء الاصطناعي... ثوانٍ قليلة.";
         actionsEl.innerHTML = "";
 
-        const prompt = `أنت مؤلف حلقات المحقق كونان. أنشئ قضية جريمة غامضة ومحبوكة فريدة لا تتشابه مع أي قضية سابقة للمرحلة رقم ${currentCaseNum}.
-أعد النتيجة حصراً بصيغة JSON بدون كتل كود وبدون أي نصوص خارج القوسين، على هذا النحو الدقيق:
-{
-  "victim": "اسم الضحية ومهنته",
-  "location": "مكان الجريمة بدقة",
-  "trickName": "اسم الخدعة الجنائية",
-  "trickClue": "الدليل المادي المتروك في مسرح الجريمة",
-  "trickTell": "العلامة أو الارتباك الذي يظهر على القاتل بعد المكالمة المفاجئة",
-  "motiveSecret": "السر أو الدافع الخفي للجريمة",
-  "callTrigger": "العبارة الصادمة التي سيقولها كونان في المكالمة الوهمية لكشف ارتباك الجاني",
-  "suspects": [
-    {"name": "الاسم الثلاثي 1", "role": "وظيفته", "isCulprit": false},
-    {"name": "الاسم الثلاثي 2", "role": "وظيفته", "isCulprit": true},
-    {"name": "الاسم الثلاثي 3", "role": "وظيفته", "isCulprit": false}
-  ]
-}`;
+        const prompt = `أنت مؤلف ألغاز كونان. أنشئ قضية جريمة جديدة وفريدة كلياً برقم #${currentCaseNum}.
+أرجع الإجابة بتنسيق JSON حصراً بدون علامات markdown كما يلي:
+{"victim":"الاسم والوظيفة","location":"المكان بدقة","trickName":"اسم الحيلة","trickClue":"الدليل المتروك بالمسرح","trickTell":"ارتباك القاتل عند المكالمة","motiveSecret":"سر الدافع","callTrigger":"جملة المكالمة الصادمة","suspects":[{"name":"شخص 1","role":"وظيفته","isCulprit":false},{"name":"شخص 2","role":"وظيفته","isCulprit":true},{"name":"شخص 3","role":"وظيفته","isCulprit":false}]}`;
 
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 ثوان كحد أقصى لمنع أي تعليق
+
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
+
             const rawData = await res.json();
             let aiText = rawData.candidates[0].content.parts[0].text;
             aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
             const parsed = JSON.parse(aiText);
-
             const culpritObj = parsed.suspects.find(s => s.isCulprit) || parsed.suspects[1];
 
             currentCase = {
@@ -376,17 +371,23 @@
                 calledTrap: false
             };
         } catch (e) {
+            // توليد فوري متنوع في حال تأخر الاستجابة
+            const scenes = [
+                { loc: "فيلا معزولة على قمة جبلية", vic: "رجل الأعمال سوزوكي", trk: "خيط حرير مشدود بالمزلاج", cl: "أثر احتكاك دقيق تحت الباب", tl: "جروح خفية في أصابعه", mot: "اختلاس أسهم شركة تجارية", call: "الأسهم الأصلية بيدي وسأفضحك!" },
+                { loc: "مقصورة قطار الشرق الليلي", vic: "المصرفي كينجي", trk: "ذوبان كتلة جليد موقوتة", cl: "بقعة رطوبة متبخرة قرب النافذة", tl: "رائحة غاز تبريد بأكمامه", mot: "تهريب سبائك ذهبية مزيفة", call: "صندوق السبائك معي وأمرك انكشف!" }
+            ];
+            const chosen = scenes[Math.floor(Math.random() * scenes.length)];
             currentCase = {
-                victim: "الخبير الجنائي ناميكي",
-                location: "قاعة أبحاث في متحف الأرشيف الوطني",
-                trick: { name: "خدعة خيط الحرير مع قفل المزلاج", clue: "أثر سحجة ميكروسكوبية وخيط رفيع أسفل الباب", tell: "خدوش وجروح دقيقة في باطن كفه" },
-                motive: { secret: "اختلاس وثيقة ملكية أثرية نادرة", callTrigger: "الوثيقة الأصلية بحوزتي وسأكشفك للشرطة!" },
+                victim: chosen.vic,
+                location: chosen.loc,
+                trick: { name: chosen.trk, clue: chosen.cl, tell: chosen.tl },
+                motive: { secret: chosen.mot, callTrigger: chosen.call },
                 suspects: [
-                    { name: "هيروشي تاكاجي", role: "المدير المالي" },
-                    { name: "ساتوشي يامادا", role: "المساعد الميداني" },
-                    { name: "كوجي سوزوكي", role: "المستشار القانوني" }
+                    { name: "هيروشي تاكاجي", role: "المستشار القانوني" },
+                    { name: "ساتوشي يامادا", role: "المساعد الخاص" },
+                    { name: "كوجي موري", role: "المدير التنفيذي" }
                 ],
-                culprit: { name: "ساتوشي يامادا", role: "المساعد الميداني" },
+                culprit: { name: "ساتوشي يامادا", role: "المساعد الخاص" },
                 calledTrap: false
             };
         }
@@ -484,19 +485,4 @@
 
         playerRef.once("value").then(snapshot => {
             const currentData = snapshot.val();
-            if (!currentData || totalScore >= (currentData.score || 0)) {
-                playerRef.set({
-                    name: playerName.trim(),
-                    stage: currentCaseNum,
-                    score: totalScore,
-                    lastUpdate: Date.now()
-                });
-            }
-        }).catch(() => {});
-    }
-
-    function accusePhase() {
-        let buttons = currentCase.suspects.map(s => ({
-            label: `المتهم هو: ${s.name}`,
-            action: () => {
-     
+            if (!cu
