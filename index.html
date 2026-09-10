@@ -172,7 +172,7 @@
     </div>
 
     <div class="scene-box" id="scene-text">
-        سجل اسمك لتبدأ تولي ملفات القضايا التي يؤلفها الذكاء الاصطناعي مباشرة!
+        سجل اسمك لتبدأ تولي ملفات الجرائم الغامضة والتنافس على قائمة المتصدرين!
     </div>
 
     <div class="btn-stack" id="actions">
@@ -277,7 +277,7 @@
         if (!inputName) return alert("اكتب اسمك أولاً!");
 
         const btn = document.getElementById("start-btn");
-        btn.innerText = "جارٍ التحقق من الاسم...";
+        btn.innerText = "جارٍ التحقق...";
         btn.disabled = true;
 
         const playerKey = encodeURIComponent(inputName.toLowerCase());
@@ -287,40 +287,48 @@
             btn.innerText = "تولي ملف القضية";
             btn.disabled = false;
 
-            if (snapshot.exists() && savedLocalName !== inputName) {
-                alert(`⚠️ المحقق "${inputName}" مسجل مسبقاً! يرجى اختيار اسم آخر.`);
-                return;
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                if (savedLocalName && savedLocalName.toLowerCase() !== inputName.toLowerCase()) {
+                    alert(`⚠️ المحقق "${inputName}" مسجل مسبقاً! يرجى اختيار اسم آخر أو إضافة رقم لتمييزه.`);
+                    return;
+                }
+                currentCaseNum = data.stage || 1;
+                totalScore = data.score || 0;
             }
 
             playerName = inputName;
             localStorage.setItem("conan_player_name", playerName);
+            localStorage.setItem("conan_stage", currentCaseNum);
+            localStorage.setItem("conan_score", totalScore);
+
+            saveProgress();
             playBgMusic();
             document.getElementById("clues-box").style.display = "block";
             startCase();
         });
     }
 
-    // توليد القضية بالذكاء الاصطناعي مع نظام بديل للحماية
     async function generateCase() {
         collectedClues = [];
         cluesList.innerHTML = "لا توجد أدلة بعد.";
-        textEl.innerText = "🧠 الذكاء الاصطناعي يؤلف الآن لغزاً جنائياً معقداً وجديداً كلياً... انتظر لحظات.";
+        textEl.innerText = "🧠 الذكاء الاصطناعي يؤلف الآن لغزاً جنائياً فريداً ومستقلاً تماماً... لحظات.";
         actionsEl.innerHTML = "";
 
         const prompt = `أنت مؤلف حلقات المحقق كونان. أنشئ قضية جريمة غامضة ومحبوكة فريدة لا تتشابه مع أي قضية سابقة للمرحلة رقم ${currentCaseNum}.
-أعد النتيجة حصراً بصيغة JSON بدون كتل كود وبدون أي نصوص خارجية، على هذا النحو الدقيق:
+أعد النتيجة حصراً بصيغة JSON بدون كتل كود وبدون أي نصوص خارج القوسين، على هذا النحو الدقيق:
 {
   "victim": "اسم الضحية ومهنته",
   "location": "مكان الجريمة بدقة",
   "trickName": "اسم الخدعة الجنائية",
-  "trickClue": "الدليل الفيزيائي المتروك في مسرح الجريمة",
-  "trickTell": "العلامة أو الارتباك الذي يظهر على القاتل بعد كشف سره",
+  "trickClue": "الدليل المادي المتروك في مسرح الجريمة",
+  "trickTell": "العلامة أو الارتباك الذي يظهر على القاتل بعد المكالمة المفاجئة",
   "motiveSecret": "السر أو الدافع الخفي للجريمة",
   "callTrigger": "العبارة الصادمة التي سيقولها كونان في المكالمة الوهمية لكشف ارتباك الجاني",
   "suspects": [
-    {"name": "الاسم الثلاثي 1", "role": "صفته أو وظيفته", "isCulprit": false},
-    {"name": "الاسم الثلاثي 2", "role": "صفته أو وظيفته", "isCulprit": true},
-    {"name": "الاسم الثلاثي 3", "role": "صفته أو وظيفته", "isCulprit": false}
+    {"name": "الاسم الثلاثي 1", "role": "وظيفته", "isCulprit": false},
+    {"name": "الاسم الثلاثي 2", "role": "وظيفته", "isCulprit": true},
+    {"name": "الاسم الثلاثي 3", "role": "وظيفته", "isCulprit": false}
   ]
 }`;
 
@@ -332,5 +340,152 @@
             });
             const rawData = await res.json();
             let aiText = rawData.candidates[0].content.parts[0].text;
-            aiText = aiText.replace(/```json/g, "").replace(/
-    
+            aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+            const parsed = JSON.parse(aiText);
+
+            const culpritObj = parsed.suspects.find(s => s.isCulprit) || parsed.suspects[1];
+
+            currentCase = {
+                victim: parsed.victim,
+                location: parsed.location,
+                trick: { name: parsed.trickName, clue: parsed.trickClue, tell: parsed.trickTell },
+                motive: { secret: parsed.motiveSecret, callTrigger: parsed.callTrigger },
+                suspects: parsed.suspects.sort(() => 0.5 - Math.random()),
+                culprit: culpritObj,
+                calledTrap: false
+            };
+        } catch (e) {
+            currentCase = {
+                victim: "الخبير الجنائي ناميكي",
+                location: "قاعة أبحاث في متحف الأرشيف الوطني",
+                trick: { name: "خدعة خيط الحرير مع قفل المزلاج", clue: "أثر سحجة ميكروسكوبية وخيط رفيع أسفل الباب", tell: "خدوش وجروح دقيقة في باطن كفه" },
+                motive: { secret: "اختلاس وثيقة ملكية أثرية نادرة", callTrigger: "الوثيقة الأصلية بحوزتي وسأكشفك للشرطة!" },
+                suspects: [
+                    { name: "هيروشي تاكاجي", role: "المدير المالي" },
+                    { name: "ساتوشي يامادا", role: "المساعد الميداني" },
+                    { name: "كوجي سوزوكي", role: "المستشار القانوني" }
+                ],
+                culprit: { name: "ساتوشي يامادا", role: "المساعد الميداني" },
+                calledTrap: false
+            };
+        }
+
+        levelEl.innerText = `القضية: #${currentCaseNum}`;
+        scoreEl.innerText = `النقاط: ${totalScore}`;
+        caseHub();
+    }
+
+    function addClue(c) {
+        if (!collectedClues.includes(c)) {
+            collectedClues.push(c);
+            cluesList.innerHTML = collectedClues.map(i => `• ${i}`).join("<br>");
+        }
+    }
+
+    function startCase() {
+        generateCase();
+    }
+
+    function setScene(text, buttons) {
+        textEl.innerText = text;
+        actionsEl.innerHTML = "";
+        buttons.forEach(b => {
+            const btn = document.createElement("button");
+            btn.innerText = b.label;
+            if (b.className) btn.className = b.className;
+            btn.onclick = b.action;
+            actionsEl.appendChild(btn);
+        });
+    }
+
+    function caseHub() {
+        setScene(
+            `القضية #${currentCaseNum}\n📍 مسرح الجريمة: [${currentCase.location}]\nالضحية: ${currentCase.victim}\n\nالمشتبه بهم المتواجدون بالموقع:\n${currentCase.suspects.map(s => `• ${s.name} (${s.role})`).join('\n')}`,
+            [
+                { label: "🔍 فحص مسرح الجريمة والآثار", action: inspectCrime },
+                { label: "👥 استجواب المشتبه بهم", action: talkSuspects },
+                { label: "🎙️ فخ بمغير الصوت (مكالمة وهمية)", action: fakeCall, className: "tool-btn" },
+                { label: "⚡ توجيه الاتهام الحاسم!", action: accusePhase, className: "danger" }
+            ]
+        );
+    }
+
+    function inspectCrime() {
+        setScene("حدد الموقع المراد تفتيشه بواسطة النظارة ومعدات الأدلة الجنائية:", [
+            { label: `فحص جثة الضحية ومقتنياتها`, action: () => {
+                addClue(`دافع الجريمة: تم العثور على وثيقة تثبت [${currentCase.motive.secret}]`);
+                setScene(`كشفت المعاينة الدقيقة أن الدافع وراء التخلص من الضحية هو:\n${currentCase.motive.secret}.`, [{ label: "فحص أثر آخر", action: inspectCrime }]);
+            }},
+            { label: `معاينة منافذ ${currentCase.location}`, action: () => {
+                addClue(`حيلة القاتل: ${currentCase.trick.clue}`);
+                setScene(`عثرت على علامة سرية تركتها الخدعة:\n${currentCase.trick.clue}.`, [{ label: "فحص أثر آخر", action: inspectCrime }]);
+            }},
+            { label: "رجوع للقاعة", action: caseHub }
+        ]);
+    }
+
+    function talkSuspects() {
+        let buttons = currentCase.suspects.map(s => ({
+            label: `${s.name} (${s.role})`,
+            action: () => {
+                if (s.name === currentCase.culprit.name && currentCase.calledTrap) {
+                    addClue(`علامة إدانة: تظهر على ${currentCase.culprit.name} [${currentCase.trick.tell}]`);
+                    setScene(`${s.name} ارتبك بعد المكالمة المفاجئة وفقد اتزانه، ولاحظت بوضوح:\n${currentCase.trick.tell}!`, [{ label: "مشتبه به آخر", action: talkSuspects }]);
+                } else {
+                    setScene(`${s.name} يتحدث بثقة ويؤكد وجود حجة غياب تنفي وجوده لحظة وقوع الجريمة.`, [{ label: "مشتبه به آخر", action: talkSuspects }]);
+                }
+            }
+        }));
+        buttons.push({ label: "رجوع", action: caseHub });
+        setScene("اختر الشخص الذي ترغب في استجوابه وملاحظة رد فعله:", buttons);
+    }
+
+    function fakeCall() {
+        if (!collectedClues.some(c => c.includes("دافع الجريمة"))) {
+            setScene("افحص الضحية أولاً لكشف سر ودافع الجريمة قبل شن المكالمة!", [{ label: "رجوع", action: caseHub }]);
+            return;
+        }
+        if (!isMuted) ringSound.play().catch(() => {});
+        currentCase.calledTrap = true;
+        setScene(
+            `📞 تقمصت نبرة صوت الضحية عبر ربطة العنق وهاتفت هاتف الموقع معلناً:\n"${currentCase.motive.callTrigger}"\n\nتغيرت ملامح الحاضرين وسيطر التوتر على الجاني! استجوبهم الآن لتكشف ارتباكه.`,
+            [{ label: "مراقبة ردود الأفعال والاستجواب", action: talkSuspects }]
+        );
+    }
+
+    function saveProgress() {
+        localStorage.setItem("conan_stage", currentCaseNum);
+        localStorage.setItem("conan_score", totalScore);
+
+        const playerKey = encodeURIComponent(playerName.trim().toLowerCase());
+        const playerRef = db.ref("leaderboard/" + playerKey);
+
+        playerRef.once("value", snapshot => {
+            const currentData = snapshot.val();
+            if (!currentData || totalScore >= (currentData.score || 0)) {
+                playerRef.set({
+                    name: playerName.trim(),
+                    stage: currentCaseNum,
+                    score: totalScore,
+                    lastUpdate: Date.now()
+                });
+            }
+        });
+    }
+
+    function accusePhase() {
+        let buttons = currentCase.suspects.map(s => ({
+            label: `المتهم هو: ${s.name}`,
+            action: () => {
+                if (s.name === currentCase.culprit.name) {
+                    const hasTrick = collectedClues.some(c => c.includes("حيلة القاتل"));
+                    const hasTell = collectedClues.some(c => c.includes("علامة إدانة"));
+
+                    if (hasTrick && hasTell) {
+                        const earnedPoints = 150;
+                        totalScore += earnedPoints;
+                        currentCaseNum++;
+                        saveProgress();
+
+                        setScene(
+                            `استنتاج عبقري وقاطع يا ${playerName}!\n'القاتل هو ${s.name}! الحيلة المستخدمة: (${currentCase.trick.name})، والدليل ارتباكك وظهور: (${currentCa
