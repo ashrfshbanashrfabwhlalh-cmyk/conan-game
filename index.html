@@ -187,7 +187,7 @@
 
     <div class="leaderboard">
         <h3>🏆 لوحة شرف المحققين (أفضل 100)</h3>
-        <div class="ranking-scroll" id="ranking-list">جارٍ تحميل الترتيب...</div>
+        <div class="ranking-scroll" id="ranking-list">لا توجد سجلات بعد، ابدأ وكن الأول!</div>
     </div>
 
     <div class="developer-footer">
@@ -226,19 +226,25 @@
         measurementId: "G-LN495367G4"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    let db = null;
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+    } catch (err) {
+        console.error("Firebase init error:", err);
+    }
 
     function loadLeaderboard() {
+        if (!db) return;
+        const list = document.getElementById("ranking-list");
         db.ref("leaderboard").on("value", snap => {
-            const list = document.getElementById("ranking-list");
-            list.innerHTML = "";
             const data = snap.val();
             if (!data) {
                 list.innerText = "لا توجد سجلات بعد، ابدأ وكن الأول!";
                 return;
             }
 
+            list.innerHTML = "";
             let ranks = Object.values(data);
             ranks.sort((a, b) => (b.score || 0) - (a.score || 0));
 
@@ -248,6 +254,8 @@
                     <span>${val.score || 0} نقطة (المرحلة ${val.stage || 1})</span>
                 </div>`;
             });
+        }, err => {
+            list.innerText = "لوحة الترتيب جاهزة بانتظار أول محقق!";
         });
     }
     loadLeaderboard();
@@ -277,26 +285,13 @@
         if (!inputName) return alert("اكتب اسمك أولاً!");
 
         const btn = document.getElementById("start-btn");
-        btn.innerText = "جارٍ التحقق...";
+        btn.innerText = "جارٍ البدء...";
         btn.disabled = true;
 
         const playerKey = encodeURIComponent(inputName.toLowerCase());
         const savedLocalName = localStorage.getItem("conan_player_name");
 
-        db.ref("leaderboard/" + playerKey).once("value", snapshot => {
-            btn.innerText = "تولي ملف القضية";
-            btn.disabled = false;
-
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                if (savedLocalName && savedLocalName.toLowerCase() !== inputName.toLowerCase()) {
-                    alert(`⚠️ المحقق "${inputName}" مسجل مسبقاً! يرجى اختيار اسم آخر أو إضافة رقم لتمييزه.`);
-                    return;
-                }
-                currentCaseNum = data.stage || 1;
-                totalScore = data.score || 0;
-            }
-
+        const proceed = () => {
             playerName = inputName;
             localStorage.setItem("conan_player_name", playerName);
             localStorage.setItem("conan_stage", currentCaseNum);
@@ -306,7 +301,33 @@
             playBgMusic();
             document.getElementById("clues-box").style.display = "block";
             startCase();
-        });
+        };
+
+        if (db) {
+            db.ref("leaderboard/" + playerKey).once("value").then(snapshot => {
+                btn.innerText = "تولي ملف القضية";
+                btn.disabled = false;
+
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    if (savedLocalName && savedLocalName.toLowerCase() !== inputName.toLowerCase()) {
+                        alert(`⚠️ المحقق "${inputName}" مسجل مسبقاً! اختر اسماً آخر.`);
+                        return;
+                    }
+                    currentCaseNum = data.stage || 1;
+                    totalScore = data.score || 0;
+                }
+                proceed();
+            }).catch(() => {
+                btn.innerText = "تولي ملف القضية";
+                btn.disabled = false;
+                proceed();
+            });
+        } else {
+            btn.innerText = "تولي ملف القضية";
+            btn.disabled = false;
+            proceed();
+        }
     }
 
     async function generateCase() {
@@ -457,10 +478,11 @@
         localStorage.setItem("conan_stage", currentCaseNum);
         localStorage.setItem("conan_score", totalScore);
 
+        if (!db) return;
         const playerKey = encodeURIComponent(playerName.trim().toLowerCase());
         const playerRef = db.ref("leaderboard/" + playerKey);
 
-        playerRef.once("value", snapshot => {
+        playerRef.once("value").then(snapshot => {
             const currentData = snapshot.val();
             if (!currentData || totalScore >= (currentData.score || 0)) {
                 playerRef.set({
@@ -470,22 +492,11 @@
                     lastUpdate: Date.now()
                 });
             }
-        });
+        }).catch(() => {});
     }
 
     function accusePhase() {
         let buttons = currentCase.suspects.map(s => ({
             label: `المتهم هو: ${s.name}`,
             action: () => {
-                if (s.name === currentCase.culprit.name) {
-                    const hasTrick = collectedClues.some(c => c.includes("حيلة القاتل"));
-                    const hasTell = collectedClues.some(c => c.includes("علامة إدانة"));
-
-                    if (hasTrick && hasTell) {
-                        const earnedPoints = 150;
-                        totalScore += earnedPoints;
-                        currentCaseNum++;
-                        saveProgress();
-
-                        setScene(
-                            `استنتاج عبقري وقاطع يا ${playerName}!\n'القاتل هو ${s.name}! الحيلة المستخدمة: (${currentCase.trick.name})، والدليل ارتباكك وظهور: (${currentCa
+     
