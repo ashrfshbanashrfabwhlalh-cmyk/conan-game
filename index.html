@@ -161,7 +161,7 @@
 <div id="game-card">
     <button class="sound-btn" onclick="toggleMute()" id="mute-btn">🔊 الصوت: مفعل</button>
     <h1>المحقق: سجل القضايا الغامضة</h1>
-    <div class="sub">لوحة الشرف: أفضل 100 محقق بدون تكرار</div>
+    <div class="sub">أكثر من 100 سيناريو جنائي حصري وغير مكرر</div>
 
     <div class="status-bar">
         <div class="level-box" id="level-display">القضية: #1</div>
@@ -169,7 +169,7 @@
     </div>
 
     <div class="scene-box" id="scene-text">
-        سجل اسمك لتبدأ التحقيق، وتنافس للوصول إلى قمة أفضل 100 محقق!
+        سجل اسمك لتبدأ تولي ملفات الجرائم المعقدة، وابحث عن التناقضات!
     </div>
 
     <div class="btn-stack" id="actions">
@@ -247,24 +247,44 @@
     }
     loadLeaderboard();
 
-    const VICTIMS = ["المهندس سوزوكي", "رجل الأعمال تاكاجي", "الممثلة ساكورا", "المحامي يامادا", "الطبيب كورودا", "الكاتب فوجي"];
-    const SUSPECT_ROLES = [
+    // بنك ضخم من الأسماء لتجنب التكرار
+    const VICTIMS = [
+        "البارون تاكاماتسو", "الملياردير هاتوري", "المصممة ريبيكا", "الموسيقار شينجي", 
+        "الأثري هاكوبا", "البروفيسور ناميكي", "الممثلة ميواكو", "التاجر أوكازاكي", 
+        "الكيميائي كاميهارا", "الصحفي ريوسوكي", "المصرفي فوجيوارا", "المؤلف يوشيدا"
+    ];
+
+    const SUSPECTS_POOL = [
         { name: "السيد كين", role: "الشريك المالي" },
-        { name: "السيدة ريما", role: "مديرة الأعمال" },
+        { name: "السيدة ريما", role: "مديرة المعارض" },
         { name: "المساعد دايسوكي", role: "السكرتير الشخصي" },
-        { name: "الحارس إيزومي", role: "مسؤول الأمن" },
-        { name: "الآنسة يوكيكو", role: "المستشارة القانونية" }
+        { name: "الحارس إيزومي", role: "مسؤول الحراسة" },
+        { name: "المحامية يوكيكو", role: "المستشارة القانونية" },
+        { name: "الطبيب أرايدي", role: "طبيب العائلة" },
+        { name: "المهندس أوسامو", role: "خبير الصيانة" },
+        { name: "الفنانة كازومي", role: "مصممة الديكور" },
+        { name: "الخادم يوشي", role: "المشرف العام" },
+        { name: "الكاتب تارو", role: "معد السجلات" },
+        { name: "السائقة ماكي", role: "مسؤولة التنقلات" },
+        { name: "المصور رين", role: "المصور الشخصي" }
     ];
+
     const TRICKS = [
-        { name: "خدعة خيط الصيد تحت عقب الباب", clue: "أثر سحجة دقيقة وخيط نايلون عند عتبة الباب", tell: "جروح حادة وخفية في أصابع اليد" },
-        { name: "خدعة ذوبان مكعب الثلج الحابس للزناد", clue: "بقعة ماء متجمدة جافة غريبة بقرب النافذة", tell: "رائحة مادة كيميائية تبريد في المعطف" },
-        { name: "خدعة التوقيت عبر شمعة وسلك مشدود", clue: "رماد غير مبرر وسلك معدني خلف الستارة", tell: "بقايا شمع لاصق على حافة الحذاء" },
-        { name: "خدعة التسميم بالتلامس عبر مقبض الهاتف", clue: "مادة سامة عديمة الرائحة ممسوحة بالمنديل", tell: "ارتداء قفاز جلدي فردي في يد واحدة" }
+        { name: "خيط الصيد المشدود بالمزلاج", clue: "أثر سحجة ميكروسكوبية وخيط شفاف تحت عتبة الباب", tell: "جروح حادة وخفية في باطن الأصابع" },
+        { name: "ذوبان مكعب الثلج الجاف الموقوت", clue: "بقعة رطوبة متبخرة وغاز كربوني قرب النافذة", tell: "رائحة مادة تبريد كيميائية في أكمام المعطف" },
+        { name: "التسميم الموضعي على فوهة الفنجان المعكوس", clue: "أثر مادة بيضاء على الجهة الخارجية من الكوب", tell: "مسحة تبييض غريبة على أطراف السبابة" },
+        { name: "التسجيل الصوتي المربوط بساعة الحائط", clue: "شريط ممغنط تالف داخل صندوق البندول", tell: "ساعة يد غير مضبوطة بفارق عشر دقائق تماماً" },
+        { name: "إبرة مسممة داخل بطانة مقبض الباب الداخلي", clue: "ثقب إبرة مجهري ورائحة لوز مرّة بالمقبض", tell: "ارتداء قفاز جلدي فردي في اليد اليمنى فقط" },
+        { name: "تلاعب بأسلاك المصعد وثقالة التوازن", clue: "خدوش جديدة على كابل التوقف الفجائي", tell: "آثار شحم صناعي داكن على حافة الحذاء" },
+        { name: "قفل الغرفة المغلقة عبر مسطرة كربونية", clue: "شرخ بلاستيكي رفيع ساقط بجانب السجادة", tell: "شظية مسطرة مماثلة مكسورة في الجيب السري" }
     ];
+
     const MOTIVES = [
-        { secret: "خزنة الاختلاس والوثائق المزورة", callTrigger: "سأفتح الخزنة الآن لأكشف تزويرك المالي!" },
-        { secret: "مسودة الوصية الجديدة وإلغاء الورثة", callTrigger: "لدي نسخة الوصية الأصلية ولن تنال شيئاً!" },
-        { secret: "تسجيل صوتي سري لعملية الابتزاز", callTrigger: "التسجيل الصوتي بحوزتي وسأسلمه للشرطة!" }
+        { secret: "خزنة الاختلاس والوثائق المزورة", callTrigger: "سأفتح الخزنة الآن لأكشف تزويرك المالي أمام الشرطة!" },
+        { secret: "مسودة الوصية الجديدة وحرمان المستفيدين", callTrigger: "مسودة الوصية بحوزتي ولن تنال مليماً واحداً!" },
+        { secret: "تسجيل صوتي سري يوثق جريمة ابتزاز قديمة", callTrigger: "شريط الابتزاز في يدي وسأسلمه للمفتش حالاً!" },
+        { secret: "سرقة براءة اختراع طبية نادرة", callTrigger: "لدي الأوراق الأصلية التي تثبت أنك لست المالك الحقيقي!" },
+        { secret: "تهريب لوحة فنية أصلية واستبدالها بنسخة مزيفة", callTrigger: "اللوحة الأصلية مكشوفة وكل التفاصيل أصبحت معي!" }
     ];
 
     let playerName = localStorage.getItem("conan_player_name") || "";
@@ -273,6 +293,8 @@
 
     let currentCase = {};
     let collectedClues = [];
+    let lastCulpritName = "";
+    let lastTrickName = "";
 
     const levelEl = document.getElementById("level-display");
     const scoreEl = document.getElementById("score-display");
@@ -287,13 +309,12 @@
         textEl.innerText = `مرحباً بعودتك يا محقق ${playerName}!\nلديك تقدم محفوظ: المرحلة (${currentCaseNum}) برصيد (${totalScore}) نقطة.`;
     }
 
-    // فحص الاسم وتنبيه اللاعب إذا كان الاسم محجوزاً
     function handleStartBtn() {
         const inputName = document.getElementById("player-name").value.trim();
         if (!inputName) return alert("اكتب اسمك أولاً!");
 
         const btn = document.getElementById("start-btn");
-        btn.innerText = "جارٍ التحقق من الاسم...";
+        btn.innerText = "جارٍ التحقق...";
         btn.disabled = true;
 
         const playerKey = encodeURIComponent(inputName.toLowerCase());
@@ -303,13 +324,11 @@
             btn.innerText = "تولي ملف القضية";
             btn.disabled = false;
 
-            // إذا كان الاسم مسجلاً في السيرفر ولكن ليس من هذا الهاتف
             if (snapshot.exists() && savedLocalName !== inputName) {
-                alert(`⚠️ المحقق "${inputName}" مسجل بالفعل في السجلات الجنائية!\nيرجى اختيار اسم آخر أو إضافة أرقام لتمييز اسمك.`);
+                alert(`⚠️ المحقق "${inputName}" مسجل مسبقاً! اختر اسماً آخر أو أضف رقماً لتمييزه.`);
                 return;
             }
 
-            // إذا كان اسماً متاحاً أو استئناف لنفس صاحب الهاتف
             playerName = inputName;
             localStorage.setItem("conan_player_name", playerName);
             playBgMusic();
@@ -318,15 +337,26 @@
         });
     }
 
+    // توليد سيناريو فريد في كل مرحلة بدون تكرار الجولة السابقة
     function generateCase() {
         collectedClues = [];
         cluesList.innerHTML = "لا توجد أدلة بعد.";
+
         const victim = VICTIMS[Math.floor(Math.random() * VICTIMS.length)];
-        const trick = TRICKS[Math.floor(Math.random() * TRICKS.length)];
+        
+        let availableTricks = TRICKS.filter(t => t.name !== lastTrickName);
+        const trick = availableTricks[Math.floor(Math.random() * availableTricks.length)];
+        lastTrickName = trick.name;
+
         const motive = MOTIVES[Math.floor(Math.random() * MOTIVES.length)];
         
-        let shuffledSuspects = [...SUSPECT_ROLES].sort(() => 0.5 - Math.random()).slice(0, 3);
-        const culprit = shuffledSuspects[Math.floor(Math.random() * shuffledSuspects.length)];
+        let shuffledSuspects = [...SUSPECTS_POOL].sort(() => 0.5 - Math.random()).slice(0, 3);
+        
+        let candidates = shuffledSuspects.filter(s => s.name !== lastCulpritName);
+        const culprit = candidates.length > 0 
+            ? candidates[Math.floor(Math.random() * candidates.length)]
+            : shuffledSuspects[0];
+        lastCulpritName = culprit.name;
 
         currentCase = { victim, trick, motive, suspects: shuffledSuspects, culprit, calledTrap: false };
         levelEl.innerText = `القضية: #${currentCaseNum}`;
@@ -359,7 +389,7 @@
 
     function caseHub() {
         setScene(
-            `القضية #${currentCaseNum}: وُجد ${currentCase.victim} مقتولاً داخل مسرح مغلق!\nالمشتبه بهم: ${currentCase.suspects.map(s => `${s.name} (${s.role})`).join('، ')}.`,
+            `القضية #${currentCaseNum}: وُجد ${currentCase.victim} جثة هامدة في مسرح الجريمة!\nالمشتبه بهم الحاضرون:\n${currentCase.suspects.map(s => `• ${s.name} (${s.role})`).join('\n')}`,
             [
                 { label: "🔍 فحص مسرح الجريمة والآثار", action: inspectCrime },
                 { label: "👥 استجواب المشتبه بهم", action: talkSuspects },
@@ -370,14 +400,14 @@
     }
 
     function inspectCrime() {
-        setScene("حدد المنطقة المراد تتبع آثارها:", [
-            { label: `فحص جثة ${currentCase.victim}`, action: () => {
-                addClue(`دافع الجريمة: عُثر على إشارة واضحة لـ [${currentCase.motive.secret}]`);
-                setScene(`وجدت دليلاً يؤكد أن الجريمة دافعها: ${currentCase.motive.secret}.`, [{ label: "فحص أثر آخر", action: inspectCrime }]);
+        setScene("حدد الموقع المراد فحصه باستخدام أدوات التحقيق:", [
+            { label: `فحص جثة الضحية (${currentCase.victim})`, action: () => {
+                addClue(`دافع الجريمة: عُثر على خيط يقود إلى [${currentCase.motive.secret}]`);
+                setScene(`بعد تفتيش المتعلقات الشخصية، تبين أن الدافع وراء التخلص منه هو:\n${currentCase.motive.secret}.`, [{ label: "فحص أثر آخر", action: inspectCrime }]);
             }},
-            { label: "فحص منافذ الدخول وآلية القفل", action: () => {
+            { label: "معاينة منافذ الغرفة ومسار الهروب", action: () => {
                 addClue(`حيلة القاتل: ${currentCase.trick.clue}`);
-                setScene(`كشفت نظارات التحليل:\n${currentCase.trick.clue}.`, [{ label: "فحص أثر آخر", action: inspectCrime }]);
+                setScene(`كشفت نظارات التحليل المكبرة أثراً حاسماً:\n${currentCase.trick.clue}.`, [{ label: "فحص أثر آخر", action: inspectCrime }]);
             }},
             { label: "رجوع للقاعة", action: caseHub }
         ]);
@@ -385,30 +415,30 @@
 
     function talkSuspects() {
         let buttons = currentCase.suspects.map(s => ({
-            label: `${s.name} - ${s.role}`,
+            label: `${s.name} (${s.role})`,
             action: () => {
                 if (s.name === currentCase.culprit.name && currentCase.calledTrap) {
                     addClue(`علامة إدانة: ${currentCase.culprit.name} تظهر عليه [${currentCase.trick.tell}]`);
-                    setScene(`${s.name} يتلعثم ويرتعش بعد المكالمة، ولاحظت بوضوح:\n${currentCase.trick.tell}!`, [{ label: "مشتبه به آخر", action: talkSuspects }]);
+                    setScene(`${s.name} ارتبك بشدة وتراجع للخلف ممسكاً بملابسه، ولاحظت بوضوح:\n${currentCase.trick.tell}!`, [{ label: "مشتبه به آخر", action: talkSuspects }]);
                 } else {
-                    setScene(`${s.name} ينفي علمه بالحادثة تماماً ويدعي براءته.`, [{ label: "مشتبه به آخر", action: talkSuspects }]);
+                    setScene(`${s.name} يبدو متماسكاً وأكد وجود حجة غياب تنفي تواجده في الغرفة وقت الحادث.`, [{ label: "مشتبه به آخر", action: talkSuspects }]);
                 }
             }
         }));
         buttons.push({ label: "رجوع", action: caseHub });
-        setScene("اختر الشخص الذي ترغب في استجوابه:", buttons);
+        setScene("اختر الشخص الذي ترغب في استجوابه ومطابقة أقواله:", buttons);
     }
 
     function fakeCall() {
         if (!collectedClues.some(c => c.includes("دافع الجريمة"))) {
-            setScene("عليك فحص الجثة أولاً لمعرفة الدافع قبل إطلاق المكالمة!", [{ label: "رجوع", action: caseHub }]);
+            setScene("افحص جثة الضحية أولاً لكشف سر الجريمة وصياغة فخ المكالمة!", [{ label: "رجوع", action: caseHub }]);
             return;
         }
         if (!isMuted) ringSound.play().catch(() => {});
         currentCase.calledTrap = true;
         setScene(
-            `📞 بصوت [${currentCase.victim}] هتفت عبر الهاتف:\n"${currentCase.motive.callTrigger}"\n\nالجاني ارتبك وبدأ يفقد أعصابه! استجوبهم الآن.`,
-            [{ label: "مراقبة ردود الأفعال", action: talkSuspects }]
+            `📞 غيرت نبرة صوتك إلى [${currentCase.victim}] وهاتفت هاتف القاعة:\n"${currentCase.motive.callTrigger}"\n\nعمّ الصمت فجأة وارتجف الجاني ظناً أن سره انكشف! استجوبهم الآن لتلتقط الدليل.`,
+            [{ label: "مراقبة ردود الأفعال واستجواب المشتبه بهم", action: talkSuspects }]
         );
     }
 
@@ -447,43 +477,4 @@
                         saveProgress();
 
                         setScene(
-                            `استنتاج صحيح وعبقري يا ${playerName}!\nتمت إدانة ${s.name} واعترف بحيلته (${currentCase.trick.name}).\n\nكسبت: +${earnedPoints} نقطة! (مجموع نقاطك: ${totalScore})`,
-                            [{ label: `الانتقال للقضية التالية (#${currentCaseNum}) 🚀`, action: startCase }]
-                        );
-                    } else {
-                        finishSession(`اتهمت ${s.name} لكنك تفتقر لإثبات الحيلة والمكالمة، فأفلت الجاني لعدم كفاية الأدلة!`);
-                    }
-                } else {
-                    finishSession(`اتهام خاطئ! ${s.name} بريء وهرب القاتل الحقيقي وسط الفوضى.`);
-                }
-            }
-        }));
-        buttons.push({ label: "تراجع للتحقق من الأدلة", action: caseHub });
-        setScene("وجه الاتهام نحو الجاني الحقيقي:", buttons);
-    }
-
-    function finishSession(msg) {
-        bgMusic.pause();
-        if (!isMuted) climaxMusic.play().catch(() => {});
-        saveProgress();
-
-        setScene(
-            `${msg}\n\n📊 سجلك الحالي يا ${playerName}:\nالمرحلة: ${currentCaseNum}\nإجمالي النقاط: ${totalScore}`,
-            [
-                { label: "🔄 إعادة محاولة هذه القضية", action: startCase },
-                { label: "⚠️ تصفير السجل والبدء من المرحلة 1", action: resetAllProgress }
-            ]
-        );
-    }
-
-    function resetAllProgress() {
-        localStorage.removeItem("conan_stage");
-        localStorage.removeItem("conan_score");
-        currentCaseNum = 1;
-        totalScore = 0;
-        location.reload();
-    }
-</script>
-
-</body>
-</html>
+                            `استنتاج عبقري وقاطع يا ${playerName}!\n'القات
