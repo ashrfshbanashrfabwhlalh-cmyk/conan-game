@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المحقق كونان: تحدي الـ 100 قضية غامضة</title>
+    <title>المحقق: سجل الـ 100 قضية</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -85,15 +85,6 @@
             white-space: pre-line;
             font-size: 0.92rem;
         }
-        .statement-box {
-            background: #1c2128;
-            border: 1px solid #444c56;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            font-size: 0.88rem;
-        }
-        .statement-name { color: #58a6ff; font-weight: bold; margin-bottom: 4px; }
         .btn-stack { display: flex; flex-direction: column; gap: 8px; }
         button {
             background: #238636;
@@ -104,12 +95,10 @@
             font-size: 0.92rem;
             cursor: pointer;
             font-weight: 500;
-            transition: 0.2s;
         }
         button:hover { background: #2ea043; }
         button.tool-btn { background: #1f6feb; }
         button.danger { background: #da3633; }
-        button.secondary { background: #30363d; }
         input[type="text"] {
             width: 100%;
             padding: 11px;
@@ -170,8 +159,8 @@
 
 <div id="game-card">
     <div class="header-controls">
-        <span style="font-size: 0.8rem; color: #8b949e;">🔎 سلسلة المائة لغز</span>
-        <button class="sound-btn" onclick="toggleMute()" id="mute-btn">🔊 الصوت: شغال</button>
+        <span style="font-size: 0.8rem; color: #8b949e;">🔎 تحدي الـ 100 قضية</span>
+        <button class="sound-btn" onclick="toggleMute()" id="mute-btn">🔊 الصوت: مفعل</button>
     </div>
 
     <h1>المحقق: سجل الـ 100 قضية</h1>
@@ -187,8 +176,7 @@
     </div>
 
     <div class="scene-box" id="scene-text">
-        مرحباً بك في سجل القضايا المغلقة للشرطة الجنائية!
-        أمامك 100 قضية تتدرج في الصعوبة، وتحتوي كل قضية على مشتبه بهم يدلون بشهاداتهم. القاتل يختلق دائماً كذبة تتناقض مباشرة مع دليل في مسرح الجريمة.
+        مرحباً بك في السجل الجنائي! اكتب اسمك في الخانة أدناه واضغط على الزر الأخضر للبدء.
     </div>
 
     <div class="btn-stack" id="actions">
@@ -197,13 +185,13 @@
     </div>
 
     <div class="inventory-panel" id="clues-box" style="display: none;">
-        <strong style="color: #58a6ff;">💼 حقيبة الأدلة الجنائية وفحص الطب الشرعي:</strong>
+        <strong style="color: #58a6ff;">💼 حقيبة الأدلة الجنائية:</strong>
         <div id="clues-list" style="margin-top: 5px; color: #e6edf3;">لا توجد أدلة بعد.</div>
     </div>
 
     <div class="leaderboard">
         <h3>🏆 لوحة شرف كبار المحققين (أفضل 100)</h3>
-        <div class="ranking-scroll" id="ranking-list">جارٍ فحص الترتيب المباشر...</div>
+        <div class="ranking-scroll" id="ranking-list">جاهز للتحميل...</div>
     </div>
 
     <div class="developer-footer">
@@ -216,20 +204,17 @@
 </div>
 
 <script>
-    // ==========================================
-    // محرك المؤثرات الصوتية الشامل (Web Audio Engine)
-    // ==========================================
     let audioCtx = null;
     let isMuted = false;
 
     function getAudioContext() {
-        if (!audioCtx) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioCtx = new AudioContext();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        try {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        } catch(e){}
         return audioCtx;
     }
 
@@ -237,12 +222,13 @@
         if (isMuted) return;
         try {
             const ctx = getAudioContext();
+            if (!ctx) return;
             setTimeout(() => {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, ctx.currentTime);
-                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
                 osc.connect(gain);
                 gain.connect(ctx.destination);
@@ -253,35 +239,18 @@
     }
 
     const SFX = {
-        clue: () => { playTone(587.33, 'sine', 0.15, 0); playTone(880, 'sine', 0.3, 120); }, // نغمة اكتشاف دليل
-        phone: () => { // رنين هاتف الفخ
-            playTone(853, 'triangle', 0.1, 0); playTone(960, 'triangle', 0.1, 0);
-            playTone(853, 'triangle', 0.1, 150); playTone(960, 'triangle', 0.1, 150);
-        },
-        shock: () => { // ضربة المفاجأة عند كشف الحقيقة
-            playTone(150, 'sawtooth', 0.4, 0);
-            playTone(110, 'sawtooth', 0.5, 80);
-        },
-        win: () => { // نغمة الانتصار
-            playTone(523.25, 'triangle', 0.12, 0);
-            playTone(659.25, 'triangle', 0.12, 100);
-            playTone(783.99, 'triangle', 0.12, 200);
-            playTone(1046.50, 'triangle', 0.4, 300);
-        },
-        fail: () => { // صوت الفشل
-            playTone(220, 'sawtooth', 0.25, 0);
-            playTone(164.81, 'sawtooth', 0.5, 200);
-        }
+        clue: () => { playTone(587, 'sine', 0.15, 0); playTone(880, 'sine', 0.25, 100); },
+        phone: () => { playTone(850, 'triangle', 0.1, 0); playTone(850, 'triangle', 0.1, 150); },
+        shock: () => { playTone(140, 'sawtooth', 0.35, 0); },
+        win: () => { playTone(523, 'triangle', 0.1, 0); playTone(659, 'triangle', 0.1, 100); playTone(783, 'triangle', 0.25, 200); },
+        fail: () => { playTone(200, 'sawtooth', 0.3, 0); }
     };
 
     function toggleMute() {
         isMuted = !isMuted;
-        document.getElementById("mute-btn").innerText = isMuted ? "🔇 الصوت: مكتوم" : "🔊 الصوت: شغال";
+        document.getElementById("mute-btn").innerText = isMuted ? "🔇 الصوت: مكتوم" : "🔊 الصوت: مفعل";
     }
 
-    // ==========================================
-    // تهيئة Firebase لحفظ الترتيب
-    // ==========================================
     const firebaseConfig = {
         apiKey: "AIzaSyB32ymAp82BykjnGOgD0K7bVlW488N_iio",
         authDomain: "detective-game-33111.firebaseapp.com",
@@ -294,42 +263,58 @@
 
     let db = null;
     try {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
+        if (window.firebase) {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        }
     } catch(e){}
 
     function fetchLeaderboard() {
-        if (!db) return;
-        db.ref("leaderboard").on("value", snap => {
-            const data = snap.val();
-            const list = document.getElementById("ranking-list");
-            if (!data) {
-                list.innerText = "لا توجد سجلات بعد، ابدأ وكن الأول!";
-                return;
-            }
-            list.innerHTML = "";
-            let players = [];
-            Object.keys(data).forEach(k => {
-                const it = data[k];
-                let name = it.name || k;
-                try { name = decodeURIComponent(name); } catch(e){}
-                players.push({ name: name, score: Number(it.score) || 0, stage: Number(it.stage) || 1 });
-            });
+        const list = document.getElementById("ranking-list");
+        if (!db) {
+            list.innerText = "سجل الترتيب متاح في المتصفح الخارجي (Chrome).";
+            return;
+        }
 
-            players.sort((a, b) => b.score - a.score || b.stage - a.stage);
-            players.slice(0, 100).forEach((val, i) => {
-                list.innerHTML += `<div class="ranking-row">
-                    <span>#${i + 1} ${val.name}</span>
-                    <span>${val.score} نقطة (القضية #${val.stage})</span>
-                </div>`;
+        const timeout = setTimeout(() => {
+            if (list.innerText === "جاهز للتحميل...") {
+                list.innerText = "الاتصال بطيء أو مقيد، ابدأ اللعب لحفظ نقاطك محلياً!";
+            }
+        }, 3500);
+
+        try {
+            db.ref("leaderboard").limitToLast(100).on("value", snap => {
+                clearTimeout(timeout);
+                const data = snap.val();
+                if (!data) {
+                    list.innerText = "لا توجد سجلات بعد، ابدأ وكن الأول!";
+                    return;
+                }
+                list.innerHTML = "";
+                let players = [];
+                Object.keys(data).forEach(k => {
+                    const it = data[k];
+                    let name = it.name || k;
+                    try { name = decodeURIComponent(name); } catch(e){}
+                    players.push({ name: name, score: Number(it.score) || 0, stage: Number(it.stage) || 1 });
+                });
+
+                players.sort((a, b) => b.score - a.score || b.stage - a.stage);
+                players.forEach((val, i) => {
+                    list.innerHTML += `<div class="ranking-row">
+                        <span>#${i + 1} ${val.name}</span>
+                        <span>${val.score} نقطة (القضية #${val.stage})</span>
+                    </div>`;
+                });
+            }, () => {
+                list.innerText = "تعذر جلب الترتيب بسبب قيود المتصفح.";
             });
-        });
+        } catch(e) {
+            list.innerText = "الترتيب يعمل محلياً على جهازك.";
+        }
     }
     fetchLeaderboard();
 
-    // ==========================================
-    // بنك العناصر الجنائية والألغاز الذكية (100 قضية)
-    // ==========================================
     const DB_VICTIMS = [
         "رجل الأعمال كينجي يامادا", "المستشار القانوني تاتشيبانا", "البروفيسور هيروشي كودو",
         "مديرة المتحف أكاني سوزوكي", "المصرفي ريوتا أوكازاكي", "الممثل المسرحي كوجي تشيبا",
@@ -337,73 +322,67 @@
     ];
 
     const DB_LOCATIONS = [
-        { name: "مركز المؤتمرات الدولي 'إيدج أوف أوشن' بخليج طوكيو", env: "الطقس ممطر بشدة والرطوبة عالية جداً والمصاعد مراقبة بكاميرات مركزية" },
+        { name: "مركز المؤتمرات الدولي 'إيدج أوف أوشن' بخليج طوكيو", env: "الطقس ممطر والرطوبة عالية والمصاعد مراقبة إلكترونياً" },
         { name: "فيلا قمة جبل هيداك المعزولة بالثلوج", env: "عاصفة ثلجية قطعت الكهرباء تماماً منذ الساعة 8:00 مساءً" },
-        { name: "مقصورة قطار الشرق الفاخر السريع", env: "القطار يسير بنفق جبلي مظلم بالكامل من الساعة 10:00 حتى 10:30" },
-        { name: "قبو الخزنات المحصن لبنك طوكيو", env: "نظام إطفاء الغاز خامل وأبواب الطوارئ تغلق بمغناطيس كهربائي" },
-        { name: "متحف الفن الإمبراطوري المغلق للترميم", env: "أرضية القاعة مغطاة بطبقة غبار كثيفة لم تمسها خطوات" },
-        { name: "يخت سياحي وسط البحر المقفل", env: "رياح بحرية عاتية تجعل إشعال النيران في السطح مستحيلاً" }
+        { name: "مقصورة قطار الشرق الفاخر السريع", env: "القطار يمر بنفق جبلي مظلم تماماً بين 10:00 و 10:30 مساءً" },
+        { name: "قبو الخزنات المحصن لبنك طوكيو", env: "الأبواب محكمة بمغناطيس كهربائي ونظام الإطفاء خامل" },
+        { name: "متحف الفن الإمبراطوري المغلق للترميم", env: "الأرضية يغطيها الغبار بدقة ولم يترك أحد أثراً بارزاً" }
     ];
 
-    // حيل دقيقة مع الدليل الحاسم والتناقض المباشر في شهادة القاتل
     const DB_MYSTERIES = [
         {
-            trick: "تفجير صمام الغاز عن بُعد ببرمجية IoT عبر الميكروويف (مستوحى من جلاد زيرو)",
-            physicalClue: "شريحة دائرة إلكترونية محترقة متصلة ببرمجية Nor وتذبذب في خط الغاز",
+            trick: "تفجير صمام الغاز عن بُعد ببرمجية IoT عبر الميكروويف",
+            physicalClue: "شريحة دائرة محترقة متصلة ببرمجية Nor وتذبذب في خط الغاز",
             autopsy: "الوفاة حدثت في تمام 9:15 بسبب صدمة الانفجار الحراري للغاز",
-            lieStatement: "كنت في مقهى الطابق السفلي طوال الوقت وأجريت مكالمات عمل بهاتفي العادي دون استخدام أي أجهزة حاسوب أو شبكات",
-            contradictionTell: "ارتجاف يديه ومحاولة إخفاء شريحة هاتف ثانوية مشفرة تستخدم نفس بروتوكول البث",
+            lieStatement: "كنت في المقهى السفلي طوال الوقت وأجريت مكالمات عمل بهاتفي العادي دون استخدام أي شبكات خارجية",
+            contradictionTell: "ارتجاف أصابعه ومحاولة إخفاء هاتف مشفر يبث بنفس البروتوكول",
             secretMotive: "الانتقام لحادثة المساعد القضائي (هابا) وفضح تستر أجهزة الأمن",
             trapCall: "تم فك تشفير خادم الأمان وعثرنا على برمجية الاختراق المسجلة باسمك!"
         },
         {
-            trick: "خيط الحرير والمزلاج المعلق لإيهام الغرفة المغلقة من الداخل",
+            trick: "خيط الحرير والمزلاج المعلق لإيهام الغرفة المغلقة",
             physicalClue: "أثر سحجة ميكروسكوبية تحت عتبة الباب وبقايا خيط شفاف بفتحة المفتاح",
             autopsy: "ساعة الوفاة 8:30 خنقاً، والمفتاح الأصلي موضوع فوق طاولة الضحية الداخلية",
-            lieStatement: "وجدت الباب مغلقاً وكسرته بنفسي، ورأيت المفتاح كان موضوعاً في ثقب الباب من الداخل مباشرة",
-            contradictionTell: "جروح وخدوش دقيقة جداً في باطن سبابته بسبب شد خيط الحرير بقوة",
+            lieStatement: "وجدت الباب مغلقاً وكسرته بنفسي، ورأيت المفتاح موضوعاً في ثقب الباب من الداخل مباشرة",
+            contradictionTell: "خدوش دقيقة جداً في باطن سبابته ناتجة عن شد الخيط بقوة",
             secretMotive: "استعادة وثائق بنكية تثبت اختلاس 200 مليون ين",
             trapCall: "الوثائق الأصلية للخزنة التي بحثت عنها أصبحت بحوزة الشرطة!"
         },
         {
             trick: "توقيت القتل بواسطة ذوبان كتلة الثلج الجاف فوق الزناد",
             physicalClue: "بقعة رطوبة متبخرة وآثار غاز كربوني قرب النافذة المفتوحة",
-            autopsy: "الرصاصة انطلقت في 10:00 مساءً تماماً، لكن درجة حرارة الجثة تشير للوفاة في 9:00",
-            lieStatement: "كنت أتحدث مع الضحية في شرفته عند الساعة 9:50 وكان بكامل صحته يشرب الشاي",
-            contradictionTell: "رائحة مادة تبريد شديدة وتكثف ثلجي على أطراف معطفه الشتوي",
+            autopsy: "الرصاصة انطلقت في 10:00 مساءً، لكن حرارة الجثة تؤكد الوفاة في 9:00",
+            lieStatement: "كنت أتحدث مع الضحية في شرفته عند الساعة 9:50 وكان يشرب الشاي بكامل نشاطه",
+            contradictionTell: "رائحة مادة تبريد وتكثف بارد على أطراف معطفه",
             secretMotive: "تعديل وصية العائلة وحرمان بقية الورثة من التركة",
             trapCall: "كاميرا الشارع المقابلة للفيلا سجلت خروجك من الباب في 9:10!"
         },
         {
-            trick: "تسميم طرف مكعب الثلج في كأس الضحية ليذوب بعد نصف ساعة",
+            trick: "تسميم طرف مكعب الثلج في كأس الضحية ليذوب لاحقاً",
             physicalClue: "شظايا جليد غير متجانسة في الكأس وتحلل بطيء لسم السيانيد",
             autopsy: "تسمم قاتل حدث بعد 40 دقيقة من تناول المشروب المسائي",
-            lieStatement: "شربت معه من نفس الزجاجة في نفس اللحظة وخرجت مسرعاً، فلو كان هناك سم لمتّ أنا أيضاً",
-            contradictionTell: "ارتداء قفاز جلدي فردي لإخفاء ملقط الثلج الكيميائي المحقون",
+            lieStatement: "شربت معه من نفس الزجاجة وخرجت مسرعاً، فلو كان هناك سم لتسممت أنا أيضاً",
+            contradictionTell: "ارتداء قفاز جلدي فردي لإخفاء ملقط كيميائي محقون",
             secretMotive: "سرقة براءة اختراع دواء بيولوجي حصري",
             trapCall: "فحص المختبر الجنائي أثبت أن الزجاجة سليمة والسم كان بالثلج فقط!"
-        },
-        {
-            trick: "استغلال انقطاع التيار والتلاعب بعقارب ساعة الحائط الرنانة",
-            physicalClue: "ساعة الحائط توقفت عقاربها ميكانيكياً عند 8:00 بسبب كسر النابض وليس 9:00",
-            autopsy: "الوفاة بالضرب على الرأس حدثت في الظلام الدامس بين 8:00 و 8:15",
-            lieStatement: "سمعت صوت ساعة الحائط ترن دقات الساعة التاسعة تماماً بينما كان يتحدث معي بالهاتف",
-            contradictionTell: "سقوط مسامير دقيقة ومفك ساعات صغير من جيب سترته الداخلي",
-            secretMotive: "ابتزاز الضحية له بشريط صوتي يوثق جريمة احتيال سابقة",
-            trapCall: "ساعة الحائط كانت مكسورة ومضبوطة يدوياً، وصوت الدقات كان تسجيلاً!"
         }
     ];
 
     const DB_NAMES_POOL = [
         "ساتوشي يامادا", "هيروشي تاكاجي", "كوجي موري", "دايسوكي أوكازاكي", "ماكوتو كوساكابي",
-        "تاتسويا إيتو", "ريوتا سوزوكي", "كيسوكي تاتشيبانا", "ناوكي تشيبا", "شينيتشي ساكاي"
+        "تاتسويا إيتو", "ريوتا سوزوكي", "كيسوكي تاتشيبانا", "ناوكي تشيبا"
     ];
-    const DB_ROLES_POOL = ["طبيب شرعي", "محامي دفاع", "مساعد مالي", "مدير أعمال الضحية", "مهندس تقني", "شريك تجاري"];
+    const DB_ROLES_POOL = ["طبيب شرعي", "محامي دفاع", "مساعد مالي", "مدير أعمال الضحية", "مهندس تقني"];
 
-    // متغيرات تقدم اللاعب
-    let playerName = localStorage.getItem("conan_100_name") || "";
-    let currentCaseNum = parseInt(localStorage.getItem("conan_100_stage")) || 1;
-    let totalScore = parseInt(localStorage.getItem("conan_100_score")) || 0;
+    let playerName = "";
+    try { playerName = localStorage.getItem("conan_100_name") || ""; } catch(e){}
+    let currentCaseNum = 1;
+    let totalScore = 0;
+    try {
+        currentCaseNum = parseInt(localStorage.getItem("conan_100_stage")) || 1;
+        totalScore = parseInt(localStorage.getItem("conan_100_score")) || 0;
+    } catch(e){}
+
     let currentCase = {};
     let collectedClues = [];
 
@@ -418,7 +397,7 @@
     if (playerName) {
         document.getElementById("player-name").value = playerName;
         updateStatus();
-        textEl.innerText = `أهلاً بعودتك يا محقق ${playerName}!\nتقدمك الحالي: تم إنجاز (${currentCaseNum - 1} من 100 قضية) برصيد (${totalScore}) نقطة.`;
+        textEl.innerText = `أهلاً بعودتك يا محقق ${playerName}!\nتقدمك الحالي: القضية #${currentCaseNum} برصيد (${totalScore}) نقطة.`;
     }
 
     function updateStatus() {
@@ -430,30 +409,26 @@
     function initDetectiveGame() {
         const input = document.getElementById("player-name").value.trim();
         if (!input) {
-            alert("يرجى إدخال اسم المحقق لتسجيل رتبتك في السجل!");
+            textEl.innerHTML = `<span style="color: #f85149; font-weight: bold;">⚠️ تنبيه: يرجى كتابة اسمك في الخانة أولاً للبدء!</span>`;
             return;
         }
         playerName = input;
-        localStorage.setItem("conan_100_name", playerName);
+        try { localStorage.setItem("conan_100_name", playerName); } catch(e){}
         cluesBox.style.display = "block";
         buildCase(currentCaseNum);
         syncFirebase();
     }
 
-    // خوارزمية توليد القضية وفق رقم المرحلة (1 إلى 100)
     function buildCase(caseNum) {
         collectedClues = [];
-        cluesList.innerHTML = "لا توجد أدلة بعد. قم بالمعاينة والتشريح أولاً.";
+        cluesList.innerHTML = "لا توجد أدلة بعد.";
         updateStatus();
 
-        // اختيار النمط الجنائي بناءً على رقم القضية
         const mysteryBase = DB_MYSTERIES[(caseNum * 3 + 7) % DB_MYSTERIES.length];
         const locationObj = DB_LOCATIONS[(caseNum * 5 + 2) % DB_LOCATIONS.length];
         const victimName = DB_VICTIMS[(caseNum * 2 + 1) % DB_VICTIMS.length];
 
-        // تجهيز 3 مشتبه بهم (1 مذنب، 2 أبرياء)
-        let shuffledNames = [...DB_NAMES_POOL].sort(() => 0.5 - Math.sin(caseNum * 11 + Math.random()));
-        
+        let shuffledNames = [...DB_NAMES_POOL].sort(() => 0.5 - Math.random());
         let suspects = [
             {
                 name: shuffledNames[0],
@@ -466,12 +441,59 @@
                 name: shuffledNames[1],
                 role: DB_ROLES_POOL[1],
                 isCulprit: false,
-                statement: "كنت في مكتب الاستقبال رفقة موظفي الأمن وراجعت السجلات الموقعة حتى 9:30.",
-                tell: "هادئ تماماً ولديه بطاقة مرور إلكترونية تثبت تواجده في الاستقبال."
+                statement: "كنت في مكتب الاستقبال رفقة موظفي الأمن وسجلت توقيعي حتى 9:30.",
+                tell: "هادئ وبطاقة مروره الإلكترونية تثبت موقعه بدقة."
             },
             {
                 name: shuffledNames[2],
                 role: DB_ROLES_POOL[2],
                 isCulprit: false,
-                statement: "سمعت صوت جلبة في الممر وحين خرجت رأيت شخصاً يركض نحو الباب الخلفي في 9:00.",
-                tell: "متعاون وقدم تسجيل كام
+                statement: "سمعت صوت جلبة في الممر ورأيت شخصاً يركض نحو الباب الخلفي في 9:00.",
+                tell: "متعاون وقدم تسجيل كاميرا هاتفه الشخصي للتحقق."
+            }
+        ];
+
+        suspects.sort(() => 0.5 - Math.random());
+
+        currentCase = {
+            num: caseNum,
+            victim: victimName,
+            location: locationObj.name,
+            environment: locationObj.env,
+            physicalClue: mysteryBase.physicalClue,
+            autopsy: mysteryBase.autopsy,
+            trick: mysteryBase.trick,
+            secretMotive: mysteryBase.secretMotive,
+            trapCall: mysteryBase.trapCall,
+            suspects: suspects,
+            culprit: suspects.find(s => s.isCulprit),
+            trapTriggered: false
+        };
+
+        renderHub();
+    }
+
+    function renderScene(txt, btns) {
+        textEl.innerText = txt;
+        actionsEl.innerHTML = "";
+        btns.forEach(b => {
+            const btn = document.createElement("button");
+            btn.innerText = b.label;
+            if (b.className) btn.className = b.className;
+            btn.onclick = () => {
+                playTone(440, 'sine', 0.08);
+                b.action();
+            };
+            actionsEl.appendChild(btn);
+        });
+    }
+
+    function renderHub() {
+        renderScene(
+            `القضية #${currentCase.num} / 100\n📍 المسرح: [${currentCase.location}]\nالضحية: ${currentCase.victim}\nالحالة: ${currentCase.environment}\n\nالمشتبه بهم:\n${currentCase.suspects.map(s => `• ${s.name} (${s.role})`).join('\n')}`,
+            [
+                { label: "🔍 فحص مسرح الجريمة والأثر المادي", action: inspectScene },
+                { label: "🔬 تقرير الطب الشرعي وساعة الوفاة", action: inspectAutopsy },
+                { label: "👥 استجواب المشتبه بهم", action: interrogations },
+                { label: "🎙️ فخ بمغير الصوت (كشف الكذبة)", action: phoneTrap, className: "tool-btn" },
+    
