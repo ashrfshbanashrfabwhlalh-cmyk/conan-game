@@ -110,13 +110,23 @@
             border: 1px solid #30363d;
         }
         .leaderboard h3 { margin: 0 0 10px 0; color: #58a6ff; font-size: 0.95rem; text-align: center; }
+        .ranking-scroll {
+            max-height: 220px;
+            overflow-y: auto;
+            padding-left: 5px;
+        }
+        .ranking-scroll::-webkit-scrollbar { width: 5px; }
+        .ranking-scroll::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
         .ranking-row {
             display: flex;
             justify-content: space-between;
-            padding: 5px 0;
+            padding: 6px 4px;
             border-bottom: 1px solid #21262d;
             font-size: 0.85rem;
         }
+        .ranking-row:nth-child(1) { color: #f1e05a; font-weight: bold; }
+        .ranking-row:nth-child(2) { color: #c0c0c0; font-weight: bold; }
+        .ranking-row:nth-child(3) { color: #cd7f32; font-weight: bold; }
         .developer-footer {
             text-align: center;
             margin-top: 18px;
@@ -151,7 +161,7 @@
 <div id="game-card">
     <button class="sound-btn" onclick="toggleMute()" id="mute-btn">🔊 الصوت: مفعل</button>
     <h1>المحقق: سجل القضايا الغامضة</h1>
-    <div class="sub">قضايا معقدة ومتجددة بدون قيود زمنية</div>
+    <div class="sub">لوحة الشرف: أفضل 100 محقق بدون تكرار</div>
 
     <div class="status-bar">
         <div class="level-box" id="level-display">القضية: #1</div>
@@ -159,12 +169,12 @@
     </div>
 
     <div class="scene-box" id="scene-text">
-        سجل اسمك لتبدأ التحقيق. تقدمك ومرحلتك ونقاطك تُحفظ تلقائياً في جهازك!
+        سجل اسمك لتبدأ التحقيق، وتنافس للوصول إلى قمة أفضل 100 محقق!
     </div>
 
     <div class="btn-stack" id="actions">
         <input type="text" id="player-name" placeholder="اكتب اسم المحقق هنا" maxlength="15">
-        <button onclick="handleStartBtn()">تولي ملف القضية</button>
+        <button id="start-btn" onclick="handleStartBtn()">تولي ملف القضية</button>
     </div>
 
     <div class="inventory-panel" id="clues-box" style="display: none;">
@@ -173,8 +183,8 @@
     </div>
 
     <div class="leaderboard">
-        <h3>🏆 لائحة المحققين (الأعلى نقاطاً)</h3>
-        <div id="ranking-list">جارٍ تحميل الترتيب...</div>
+        <h3>🏆 قائمة أفضل 100 محقق متصدر</h3>
+        <div class="ranking-scroll" id="ranking-list">جارٍ تحميل الترتيب...</div>
     </div>
 
     <div class="developer-footer">
@@ -215,15 +225,24 @@
     const db = firebase.database();
 
     function loadLeaderboard() {
-        db.ref("leaderboard").orderByChild("score").limitToLast(5).on("value", snap => {
+        db.ref("leaderboard").on("value", snap => {
             const list = document.getElementById("ranking-list");
             list.innerHTML = "";
-            let ranks = [];
-            snap.forEach(c => ranks.push(c.val()));
-            ranks.reverse().forEach((val, i) => {
-                list.innerHTML += `<div class="ranking-row"><span>#${i+1} ${val.name}</span><span>${val.score || 0} نقطة (المرحلة ${val.stage || 1})</span></div>`;
+            const data = snap.val();
+            if (!data) {
+                list.innerText = "لا توجد سجلات بعد، ابدأ وكن الأول!";
+                return;
+            }
+
+            let ranks = Object.values(data);
+            ranks.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+            ranks.slice(0, 100).forEach((val, i) => {
+                list.innerHTML += `<div class="ranking-row">
+                    <span>#${i + 1} ${val.name}</span>
+                    <span>${val.score || 0} نقطة (المرحلة ${val.stage || 1})</span>
+                </div>`;
             });
-            if (ranks.length === 0) list.innerText = "لا توجد سجلات بعد، ابدأ وكن الأول!";
         });
     }
     loadLeaderboard();
@@ -268,14 +287,35 @@
         textEl.innerText = `مرحباً بعودتك يا محقق ${playerName}!\nلديك تقدم محفوظ: المرحلة (${currentCaseNum}) برصيد (${totalScore}) نقطة.`;
     }
 
+    // فحص الاسم وتنبيه اللاعب إذا كان الاسم محجوزاً
     function handleStartBtn() {
-        const val = document.getElementById("player-name").value.trim();
-        if (!val) return alert("اكتب اسمك أولاً!");
-        playerName = val;
-        localStorage.setItem("conan_player_name", playerName);
-        playBgMusic();
-        document.getElementById("clues-box").style.display = "block";
-        startCase();
+        const inputName = document.getElementById("player-name").value.trim();
+        if (!inputName) return alert("اكتب اسمك أولاً!");
+
+        const btn = document.getElementById("start-btn");
+        btn.innerText = "جارٍ التحقق من الاسم...";
+        btn.disabled = true;
+
+        const playerKey = encodeURIComponent(inputName.toLowerCase());
+        const savedLocalName = localStorage.getItem("conan_player_name");
+
+        db.ref("leaderboard/" + playerKey).once("value", snapshot => {
+            btn.innerText = "تولي ملف القضية";
+            btn.disabled = false;
+
+            // إذا كان الاسم مسجلاً في السيرفر ولكن ليس من هذا الهاتف
+            if (snapshot.exists() && savedLocalName !== inputName) {
+                alert(`⚠️ المحقق "${inputName}" مسجل بالفعل في السجلات الجنائية!\nيرجى اختيار اسم آخر أو إضافة أرقام لتمييز اسمك.`);
+                return;
+            }
+
+            // إذا كان اسماً متاحاً أو استئناف لنفس صاحب الهاتف
+            playerName = inputName;
+            localStorage.setItem("conan_player_name", playerName);
+            playBgMusic();
+            document.getElementById("clues-box").style.display = "block";
+            startCase();
+        });
     }
 
     function generateCase() {
@@ -376,11 +416,19 @@
         localStorage.setItem("conan_stage", currentCaseNum);
         localStorage.setItem("conan_score", totalScore);
 
-        db.ref("leaderboard/" + playerName.replace(/[.#$\[\]]/g, "_")).set({
-            name: playerName,
-            stage: currentCaseNum,
-            score: totalScore,
-            lastUpdate: Date.now()
+        const playerKey = encodeURIComponent(playerName.trim().toLowerCase());
+        const playerRef = db.ref("leaderboard/" + playerKey);
+
+        playerRef.once("value", snapshot => {
+            const currentData = snapshot.val();
+            if (!currentData || totalScore > (currentData.score || 0)) {
+                playerRef.set({
+                    name: playerName.trim(),
+                    stage: currentCaseNum,
+                    score: totalScore,
+                    lastUpdate: Date.now()
+                });
+            }
         });
     }
 
