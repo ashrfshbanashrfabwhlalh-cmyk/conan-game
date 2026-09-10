@@ -164,7 +164,7 @@
 <div id="game-card">
     <button class="sound-btn" onclick="toggleMute()" id="mute-btn">🔊 الصوت: مفعل</button>
     <h1>المحقق: سجل القضايا الغامضة</h1>
-    <div class="sub">مدعوم بالذكاء الاصطناعي الحي (Gemini AI)</div>
+    <div class="sub">نظام التحقيق الجنائي التفاعلي</div>
 
     <div class="status-bar">
         <div class="level-box" id="level-display">القضية: #1</div>
@@ -200,15 +200,17 @@
 </div>
 
 <script>
-    const GEMINI_API_KEY = "AIzaSyDTKpPJcPRtI8Zsg-Cq8BnHxIOeJIGp9DQ";
-
     const bgMusic = new Audio("https://cdn.freesound.org/previews/415/415804_5121236-lq.mp3");
     const climaxMusic = new Audio("https://cdn.freesound.org/previews/172/172561_174499-lq.mp3");
     const ringSound = new Audio("https://cdn.freesound.org/previews/218/218333_3905081-lq.mp3");
     bgMusic.loop = true;
     let isMuted = false;
 
-    function playBgMusic() { if (!isMuted) bgMusic.play().catch(() => {}); }
+    function playBgMusic() { 
+        if (!isMuted) {
+            try { bgMusic.play().catch(() => {}); } catch(e){}
+        } 
+    }
     function toggleMute() {
         isMuted = !isMuted;
         bgMusic.muted = climaxMusic.muted = ringSound.muted = isMuted;
@@ -231,7 +233,7 @@
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
     } catch (err) {
-        console.error("Firebase init error:", err);
+        console.error("Firebase init:", err);
     }
 
     function loadLeaderboard() {
@@ -259,6 +261,53 @@
         });
     }
     loadLeaderboard();
+
+    // محرك التوليد الضخم المتنوع
+    const FIRST_NAMES = ["دايسوكي", "ساتوشي", "ريوتا", "تاتسويا", "ماكوتو", "يومي", "أكاني", "ناتسوكي", "شيزوكا", "ناوكي", "كازوما", "رين", "سورا", "يوساكو", "جين", "كينيتشي", "هاروتو", "يوكي"];
+    const LAST_NAMES = ["موري", "كودو", "هاتوري", "أوكازاكي", "سوزوكي", "تاكاجي", "يامادا", "تشيبا", "كورودا", "فوجيوارا", "ناميكي", "أوسامو", "كاميهارا", "يوشيدا", "واتانابي", "إيتو"];
+    const OCCUPATIONS = ["طبيب شرعي", "مهندس تقني", "محامي دفاع", "رجل أعمال", "مديرة فنادق", "مؤلفة روايات", "كيميائي", "خبير مجوهرات", "أستاذ جامعي", "قبطان سفينة", "مفتش حسابات"];
+
+    const LOCATIONS = [
+        "فيلا معزولة على قمة جبلية مغطاة بالثلوج",
+        "مقصورة الدرجة الأولى بقطار ليلي سريع",
+        "قبو بنك استثماري مغلق بنظام إلكتروني",
+        "صالة العرض بمتحف الآثار المغلق ليلاً",
+        "يخت شراعي معزول وسط البحر",
+        "غرفة أبحاث في مختبر دوائي عالي الأمان"
+    ];
+
+    const TRICKS = [
+        { name: "خيط الصيد المشدود بالمزلاج", clue: "أثر سحجة ميكروسكوبية وخيط شفاف تحت عتبة الباب", tell: "جروح دقيقة وخدوش رفيعة جداً في باطن أصابعه" },
+        { name: "ذوبان كتلة الثلج الجاف الموقوتة", clue: "بقعة رطوبة متبخرة وآثار غاز كربوني قرب النافذة", tell: "رائحة مادة تبريد وتكثف بارد في أطراف أكمامه" },
+        { name: "التسميم الموضعي على فوهة الفنجان المعكوس", clue: "أثر مادة بيضاء مسحوقة على الجهة الخارجية للكوب", tell: "بقع بيضاء مبيضة غريبة تحت أظافر يده" },
+        { name: "شريط التسجيل المربوط ببندول الساعة", clue: "بقايا بكرة مغناطيسية تالفة في صندوق ساعة الحائط", tell: "ساعة معصمه متقدمة عمداً بفارق عشر دقائق" },
+        { name: "إبرة مسممة في بطانة مقبض الباب", clue: "ثقب إبرة مجهري ورائحة لوز مرّة عند مقبض القفل", tell: "يرتدي قفازاً جلدياً في يد واحدة لإخفاء ثقب بالإصبع" }
+    ];
+
+    const MOTIVES = [
+        { secret: "خزنة الاختلاس والوثائق البنكية المزورة", callTrigger: "سأفتح الخزنة الآن لأكشف تزويرك المالي أمام الشرطة!" },
+        { secret: "مسودة الوصية الجديدة وحرمان المستفيدين", callTrigger: "مسودة الوصية بحوزتي ولن تنال مليماً واحداً!" },
+        { secret: "تسجيل صوتي سري يوثق جريمة ابتزاز سابقة", callTrigger: "شريط الابتزاز في يدي وسأسلمه للمفتش حالاً!" },
+        { secret: "سرقة براءة اختراع طبية نادرة مسجلة", callTrigger: "لدي الوثائق الأصلية التي تثبت سرقتك للبراءة العلمية!" }
+    ];
+
+    let usedNamesSet = new Set();
+
+    function getUniquePerson() {
+        let f, l, o, full;
+        let attempts = 0;
+        do {
+            f = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+            l = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+            o = OCCUPATIONS[Math.floor(Math.random() * OCCUPATIONS.length)];
+            full = `${f} ${l}`;
+            attempts++;
+            if (attempts > 60) usedNamesSet.clear();
+        } while (usedNamesSet.has(full));
+
+        usedNamesSet.add(full);
+        return { name: full, role: o };
+    }
 
     let playerName = localStorage.getItem("conan_player_name") || "";
     let currentCaseNum = parseInt(localStorage.getItem("conan_stage")) || 1;
@@ -288,7 +337,7 @@
         }
 
         const btn = document.getElementById("start-btn");
-        btn.innerText = "جارٍ الفحص...";
+        btn.innerText = "جارٍ الفحص والبدء...";
         btn.disabled = true;
 
         const playerKey = encodeURIComponent(inputName.toLowerCase());
@@ -314,7 +363,7 @@
                 if (snapshot.exists()) {
                     const data = snapshot.val();
                     if (savedLocalName && savedLocalName.toLowerCase() !== inputName.toLowerCase()) {
-                        alert(`⚠️ الاسم "${inputName}" مسجل مسبقاً! اكتب اسماً مختلفاً أو أضف رقماً.`);
+                        alert(`⚠️ الاسم "${inputName}" مسجل مسبقاً! اكتب اسماً مختلفاً.`);
                         return;
                     }
                     currentCaseNum = data.stage || 1;
@@ -333,64 +382,31 @@
         }
     }
 
-    async function generateCase() {
+    function generateCase() {
         collectedClues = [];
         cluesList.innerHTML = "لا توجد أدلة بعد.";
-        textEl.innerText = "🧠 جارٍ تأليف تفاصيل القضية بالذكاء الاصطناعي... ثوانٍ قليلة.";
-        actionsEl.innerHTML = "";
 
-        const prompt = `أنت مؤلف ألغاز كونان. أنشئ قضية جريمة جديدة وفريدة كلياً برقم #${currentCaseNum}.
-أرجع الإجابة بتنسيق JSON حصراً بدون علامات markdown كما يلي:
-{"victim":"الاسم والوظيفة","location":"المكان بدقة","trickName":"اسم الحيلة","trickClue":"الدليل المتروك بالمسرح","trickTell":"ارتباك القاتل عند المكالمة","motiveSecret":"سر الدافع","callTrigger":"جملة المكالمة الصادمة","suspects":[{"name":"شخص 1","role":"وظيفته","isCulprit":false},{"name":"شخص 2","role":"وظيفته","isCulprit":true},{"name":"شخص 3","role":"وظيفته","isCulprit":false}]}`;
+        const vic = getUniquePerson();
+        const loc = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+        const trk = TRICKS[Math.floor(Math.random() * TRICKS.length)];
+        const mot = MOTIVES[Math.floor(Math.random() * MOTIVES.length)];
 
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 ثوان كحد أقصى لمنع أي تعليق
-
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            const rawData = await res.json();
-            let aiText = rawData.candidates[0].content.parts[0].text;
-            aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
-            const parsed = JSON.parse(aiText);
-            const culpritObj = parsed.suspects.find(s => s.isCulprit) || parsed.suspects[1];
-
-            currentCase = {
-                victim: parsed.victim,
-                location: parsed.location,
-                trick: { name: parsed.trickName, clue: parsed.trickClue, tell: parsed.trickTell },
-                motive: { secret: parsed.motiveSecret, callTrigger: parsed.callTrigger },
-                suspects: parsed.suspects.sort(() => 0.5 - Math.random()),
-                culprit: culpritObj,
-                calledTrap: false
-            };
-        } catch (e) {
-            // توليد فوري متنوع في حال تأخر الاستجابة
-            const scenes = [
-                { loc: "فيلا معزولة على قمة جبلية", vic: "رجل الأعمال سوزوكي", trk: "خيط حرير مشدود بالمزلاج", cl: "أثر احتكاك دقيق تحت الباب", tl: "جروح خفية في أصابعه", mot: "اختلاس أسهم شركة تجارية", call: "الأسهم الأصلية بيدي وسأفضحك!" },
-                { loc: "مقصورة قطار الشرق الليلي", vic: "المصرفي كينجي", trk: "ذوبان كتلة جليد موقوتة", cl: "بقعة رطوبة متبخرة قرب النافذة", tl: "رائحة غاز تبريد بأكمامه", mot: "تهريب سبائك ذهبية مزيفة", call: "صندوق السبائك معي وأمرك انكشف!" }
-            ];
-            const chosen = scenes[Math.floor(Math.random() * scenes.length)];
-            currentCase = {
-                victim: chosen.vic,
-                location: chosen.loc,
-                trick: { name: chosen.trk, clue: chosen.cl, tell: chosen.tl },
-                motive: { secret: chosen.mot, callTrigger: chosen.call },
-                suspects: [
-                    { name: "هيروشي تاكاجي", role: "المستشار القانوني" },
-                    { name: "ساتوشي يامادا", role: "المساعد الخاص" },
-                    { name: "كوجي موري", role: "المدير التنفيذي" }
-                ],
-                culprit: { name: "ساتوشي يامادا", role: "المساعد الخاص" },
-                calledTrap: false
-            };
+        let suspects = [];
+        for (let i = 0; i < 3; i++) {
+            suspects.push(getUniquePerson());
         }
+
+        const culprit = suspects[Math.floor(Math.random() * suspects.length)];
+
+        currentCase = {
+            victim: `${vic.role}: ${vic.name}`,
+            location: loc,
+            trick: trk,
+            motive: mot,
+            suspects: suspects,
+            culprit: culprit,
+            calledTrap: false
+        };
 
         levelEl.innerText = `القضية: #${currentCaseNum}`;
         scoreEl.innerText = `النقاط: ${totalScore}`;
@@ -481,8 +497,4 @@
 
         if (!db) return;
         const playerKey = encodeURIComponent(playerName.trim().toLowerCase());
-        const playerRef = db.ref("leaderboard/" + playerKey);
-
-        playerRef.once("value").then(snapshot => {
-            const currentData = snapshot.val();
-            if (!cu
+        const playerRef = db.ref("leaderboard/" + playerKe
