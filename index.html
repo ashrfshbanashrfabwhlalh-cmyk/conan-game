@@ -187,7 +187,7 @@
 
     <div class="leaderboard">
         <h3>🏆 لوحة شرف المحققين (أفضل 100)</h3>
-        <div class="ranking-scroll" id="ranking-list">لا توجد سجلات بعد، ابدأ وكن الأول!</div>
+        <div class="ranking-scroll" id="ranking-list">جارٍ قراءة لوحة الشرف...</div>
     </div>
 
     <div class="developer-footer">
@@ -208,7 +208,7 @@
 
     function playBgMusic() { 
         if (!isMuted) {
-            try { bgMusic.play().catch(() => {}); } catch(e){}
+            bgMusic.play().catch(() => {});
         } 
     }
     function toggleMute() {
@@ -232,9 +232,7 @@
     try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
-    } catch (err) {
-        console.error("Firebase init:", err);
-    }
+    } catch (err) {}
 
     function loadLeaderboard() {
         if (!db) return;
@@ -248,12 +246,16 @@
 
             list.innerHTML = "";
             let ranks = Object.values(data);
-            ranks.sort((a, b) => (b.score || 0) - (a.score || 0));
+            ranks.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
 
             ranks.slice(0, 100).forEach((val, i) => {
+                const pName = val.name || "محقق مجهول";
+                const pScore = val.score || 0;
+                const pStage = val.stage || 1;
+
                 list.innerHTML += `<div class="ranking-row">
-                    <span>#${i + 1} ${val.name}</span>
-                    <span>${val.score || 0} نقطة (المرحلة ${val.stage || 1})</span>
+                    <span>#${i + 1} ${pName}</span>
+                    <span>${pScore} نقطة (المرحلة ${pStage})</span>
                 </div>`;
             });
         }, () => {
@@ -262,16 +264,15 @@
     }
     loadLeaderboard();
 
-    // محرك التوليد الضخم المتنوع
     const FIRST_NAMES = ["دايسوكي", "ساتوشي", "ريوتا", "تاتسويا", "ماكوتو", "يومي", "أكاني", "ناتسوكي", "شيزوكا", "ناوكي", "كازوما", "رين", "سورا", "يوساكو", "جين", "كينيتشي", "هاروتو", "يوكي"];
     const LAST_NAMES = ["موري", "كودو", "هاتوري", "أوكازاكي", "سوزوكي", "تاكاجي", "يامادا", "تشيبا", "كورودا", "فوجيوارا", "ناميكي", "أوسامو", "كاميهارا", "يوشيدا", "واتانابي", "إيتو"];
-    const OCCUPATIONS = ["طبيب شرعي", "مهندس تقني", "محامي دفاع", "رجل أعمال", "مديرة فنادق", "مؤلفة روايات", "كيميائي", "خبير مجوهرات", "أستاذ جامعي", "قبطان سفينة", "مفتش حسابات"];
+    const OCCUPATIONS = ["طبيب شرعي", "مهندس برمجيات", "محامي دفاع", "رجل أعمال", "مديرة فنادق", "مؤلفة روايات", "كيميائي جنائي", "خبير مجوهرات", "أستاذ جامعي", "قبطان سفينة", "مفتش حسابات"];
 
     const LOCATIONS = [
-        "فيلا معزولة على قمة جبلية مغطاة بالثلوج",
+        "فيلا معزولة على قمة جبلية ثلجية",
         "مقصورة الدرجة الأولى بقطار ليلي سريع",
-        "قبو بنك استثماري مغلق بنظام إلكتروني",
-        "صالة العرض بمتحف الآثار المغلق ليلاً",
+        "قبو بنك استثماري مغلق إلكترونياً",
+        "صالة العرض بمتحف الآثار المغلق",
         "يخت شراعي معزول وسط البحر",
         "غرفة أبحاث في مختبر دوائي عالي الأمان"
     ];
@@ -292,7 +293,6 @@
     ];
 
     let usedNamesSet = new Set();
-
     function getUniquePerson() {
         let f, l, o, full;
         let attempts = 0;
@@ -302,7 +302,7 @@
             o = OCCUPATIONS[Math.floor(Math.random() * OCCUPATIONS.length)];
             full = `${f} ${l}`;
             attempts++;
-            if (attempts > 60) usedNamesSet.clear();
+            if (attempts > 50) usedNamesSet.clear();
         } while (usedNamesSet.has(full));
 
         usedNamesSet.add(full);
@@ -332,53 +332,33 @@
     function handleStartBtn() {
         const inputName = document.getElementById("player-name").value.trim();
         if (!inputName) {
-            alert("⚠️ اكتب اسم المحقق في المربع أولاً للبدء!");
+            alert("⚠️ اكتب اسمك أولاً!");
             return;
         }
 
-        const btn = document.getElementById("start-btn");
-        btn.innerText = "جارٍ الفحص والبدء...";
-        btn.disabled = true;
+        playerName = inputName;
+        localStorage.setItem("conan_player_name", playerName);
+        localStorage.setItem("conan_stage", currentCaseNum);
+        localStorage.setItem("conan_score", totalScore);
 
-        const playerKey = encodeURIComponent(inputName.toLowerCase());
-        const savedLocalName = localStorage.getItem("conan_player_name");
-
-        const proceed = () => {
-            playerName = inputName;
-            localStorage.setItem("conan_player_name", playerName);
-            localStorage.setItem("conan_stage", currentCaseNum);
-            localStorage.setItem("conan_score", totalScore);
-
-            saveProgress();
-            playBgMusic();
-            document.getElementById("clues-box").style.display = "block";
-            startCase();
-        };
+        playBgMusic();
+        document.getElementById("clues-box").style.display = "block";
+        startCase();
 
         if (db) {
+            const playerKey = encodeURIComponent(playerName.toLowerCase());
             db.ref("leaderboard/" + playerKey).once("value").then(snapshot => {
-                btn.innerText = "تولي ملف القضية";
-                btn.disabled = false;
-
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    if (savedLocalName && savedLocalName.toLowerCase() !== inputName.toLowerCase()) {
-                        alert(`⚠️ الاسم "${inputName}" مسجل مسبقاً! اكتب اسماً مختلفاً.`);
-                        return;
+                    if (data.stage && data.stage > currentCaseNum) {
+                        currentCaseNum = data.stage;
+                        totalScore = data.score || totalScore;
+                        levelEl.innerText = `القضية: #${currentCaseNum}`;
+                        scoreEl.innerText = `النقاط: ${totalScore}`;
                     }
-                    currentCaseNum = data.stage || 1;
-                    totalScore = data.score || 0;
                 }
-                proceed();
-            }).catch(() => {
-                btn.innerText = "تولي ملف القضية";
-                btn.disabled = false;
-                proceed();
-            });
-        } else {
-            btn.innerText = "تولي ملف القضية";
-            btn.disabled = false;
-            proceed();
+                saveProgress();
+            }).catch(() => {});
         }
     }
 
@@ -497,4 +477,23 @@
 
         if (!db) return;
         const playerKey = encodeURIComponent(playerName.trim().toLowerCase());
-        const playerRef = db.ref("leaderboard/" + playerKe
+        const playerRef = db.ref("leaderboard/" + playerKey);
+
+        playerRef.once("value").then(snapshot => {
+            const currentData = snapshot.val();
+            if (!currentData || totalScore >= (currentData.score || 0)) {
+                playerRef.set({
+                    name: playerName.trim(),
+                    stage: currentCaseNum,
+                    score: totalScore,
+                    lastUpdate: Date.now()
+                });
+            }
+        }).catch(() => {});
+    }
+
+    function accusePhase() {
+        let buttons = currentCase.suspects.map(s => ({
+            label: `المتهم هو: ${s.name}`,
+            action: () => {
+                if (s.name === curr
